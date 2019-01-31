@@ -1,0 +1,66 @@
+##C:\Users\lewisb\Documents\CBMprgStudioWorkspace\Pirates\main.bas
+100 rem game setup
+110 gosub 1000: rem configure multicolor mode
+120 rem load character data
+130 gosub 50000: rem draw screen
+140 rem main game loop
+150 rem render pirate
+160 rem render bird
+170 rem render coconuts
+180 rem check collisions
+190 rem check for endgame
+200 rem goto 140
+210 end
+1000 rem configure multicolor mode
+1010 poke 53270, peek(53270) or 16: rem activate multicolor mode
+1020 poke 53282, 12: rem 01 color is dark grayh
+1030 poke 53282, 4: rem 10 color is purple
+1040 return
+##C:\Users\lewisb\Documents\CBMprgStudioWorkspace\Pirates\chardata.bas
+40000 DATA 170,255,095,255,255,247,255,170 : REM CHARACTER 0
+40001 DATA 170,255,255,223,255,253,127,170 : REM CHARACTER 1
+40002 DATA 170,254,254,126,254,254,246,170 : REM CHARACTER 2
+40003 DATA 170,191,191,189,191,191,159,170 : REM CHARACTER 3
+40004 DATA 150,150,150,150,150,150,150,150 : REM CHARACTER 4
+40005 DATA 255,255,255,255,255,255,255,255 : REM CHARACTER 5
+40006 DATA 003,003,015,015,063,063,255,255 : REM CHARACTER 6
+40007 DATA 015,015,015,015,015,015,015,015 : REM CHARACTER 7
+40008 DATA 003,003,003,003,015,015,015,015 : REM CHARACTER 8
+40009 DATA 015,015,015,015,003,003,003,003 : REM CHARACTER 9
+40010 DATA 255,255,063,063,015,015,003,003 : REM CHARACTER 10
+40011 DATA 063,063,063,063,063,063,063,063 : REM CHARACTER 11
+40012 DATA 240,240,192,192,192,000,000,000 : REM CHARACTER 12
+40013 DATA 015,015,003,003,003,000,000,000 : REM CHARACTER 13
+40014 DATA 000,000,000,192,192,192,240,240 : REM CHARACTER 14
+40015 DATA 000,000,000,003,003,003,015,015 : REM CHARACTER 15
+40016 DATA 000,016,116,016,000,000,000,000 : REM CHARACTER 16
+##C:\Users\lewisb\Documents\CBMprgStudioWorkspace\Pirates\screen.bas
+50000 rem DRAW THE SCREEN
+50001 REM SCREEN 1 - 
+50002 PRINT ""
+50003 PRINT " {light green}p                                    p"
+50004 PRINT "               p            p"
+50005 PRINT ""
+50006 PRINT "                                p"
+50007 PRINT ""
+50008 PRINT ""
+50009 PRINT ""
+50010 PRINT "            p"
+50011 PRINT ""
+50012 PRINT "                                     {brown}ca"
+50013 PRINT "                                     ca"
+50014 PRINT "                                 {light green}p   {brown}ca"
+50015 PRINT "@@b                                  ca"
+50016 PRINT "@@b                                  ca"
+50017 PRINT "@@b                                  ca"
+50018 PRINT "@@b               {light green}p                  {brown}ca"
+50019 PRINT "@@b                                  ca"
+50020 PRINT "@@b                                  ca"
+50021 PRINT "@@b                                  ca"
+50022 PRINT "@b@@@@@b@@aa@@bc@@@@cacc@@a@@@@@aa@@@@@"
+50023 PRINT "aa@b@c@@@lmaalmaalmaaa@@a@lmaalmaalma@@"
+50024 PRINT "@aaaaaaaanoaano@@no@a@@aa@noaano@@noa@@"
+50025 PRINT "@bb@aac@@@@@@@@c@@@abaaa@aa@@ca@b@@@@b@"
+50026 PRINT ""
+50036 return
+##C:\Users\lewisb\Documents\CBMprgStudioWorkspace\Pirates\spritedata.bas
