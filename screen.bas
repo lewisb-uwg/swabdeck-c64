@@ -24,5 +24,4 @@
 50023 PRINT "aa@b@c@@@lmaalmaalmaaa@@a@lmaalmaalma@@"
 50024 PRINT "@aaaaaaaanoaano@@no@a@@aa@noaano@@noa@@"
 50025 PRINT "@bb@aac@@@@@@@@c@@@abaaa@aa@@ca@b@@@@b@"
-50026 PRINT ""
 50036 return
