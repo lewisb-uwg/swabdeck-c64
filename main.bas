@@ -9,7 +9,7 @@
  43 rem game state variables
  45 PX=60: PY=150: rem pirate x,y coords
  50 B1=SD+128: B2=SD+192: rem bird animation frame addresses
- 55 BX=30: BY=80: rem bird x,y coords
+ 55 BX=30: BY=50: rem bird x,y coords
  60 FR=0: rem current frame in the global animation loop
 100 rem game setup
 105 poke 53281,0: rem black background
