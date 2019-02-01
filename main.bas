@@ -1,6 +1,7 @@
   0 rem chardata should begin at line 30000
   1 rem spritedata should begin at line 40000
  10 rem constants/game state
+ 15 BS=5: rem Bird Speed
  20 CD=12288: rem chardata start address
  30 SD=CD-(64*6): rem sprite data start address
  40 P1=SD: P2=SD+64: rem pirate animation frame addresses
@@ -20,6 +21,7 @@
 140 rem main game loop
 145 gosub 6000: rem handle keyboard input
 150 gosub 4000: rem render current pirate frame
+155 gosub 7000: rem move bird
 160 gosub 5000: rem render current bird frame
 170 rem render coconuts
 180 rem check collisions
@@ -75,3 +77,9 @@
 6038 IF PX>327 THEN PX=327: REM MAX X
 6039 if PX>255 THEN POKE 53248, PX-255: POKE 53264, PEEK(53264) OR 1
 6040 return
+7000 rem move bird
+7010 BX = BX+BS 
+7011 if BX>346 then BX=0: rem MAX X 
+7012 if BX>255 then POKE 53250, BX-255: POKE 53264, PEEK(53264) OR 2: goto 7030
+7021 POKE 53250, BX: POKE 53264, PEEK(53264) AND 13
+7030 return
