@@ -1,5 +1,6 @@
   0 rem chardata should begin at line 30000
   1 rem spritedata should begin at line 40000
+  2 rem screen routine should begin at line 50000
  10 rem constants/game state
  15 BS=5: rem Bird Speed
  20 CD=12288: rem chardata start address
