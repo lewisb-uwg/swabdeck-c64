@@ -18,8 +18,9 @@
 135 gosub 3000: rem load sprite data
 138 gosub 3500: rem configure sprites
 140 rem main game loop
+145 gosub 6000: rem handle keyboard input
 150 gosub 4000: rem render current pirate frame
-160 gosub 5000: rem render bird
+160 gosub 5000: rem render current bird frame
 170 rem render coconuts
 180 rem check collisions
 190 rem check for endgame
@@ -59,9 +60,17 @@
 4010 if FR=4 or FR=12 then poke 2040,P2/64
 4020 if FR=0 or FR=8 then poke 2040,P1/64
 4030 return
-5000 rem render bird
+5000 rem render current bird frame
 5010 for I=0 to NF step 2
 5020 if FR=I then poke 2041,B1/64: goto 5050
 5030 next I
 5040 poke 2041,B2/64
 5050 return
+6000 rem handle keyboard input
+6010 KB=peek(203)
+6020 if KB=10 then PX=PX-5: rem A is left
+6030 if KB=13 then PX=PX+5: rem S is right
+6035 if PX <= 255 then poke 53248, PX: POKE 53264, PEEK(53264) AND 14
+6038 IF PX>327 THEN PX=327: REM MAX X
+6039 if PX>255 THEN POKE 53248, PX-255: POKE 53264, PEEK(53264) OR 1
+6040 return
