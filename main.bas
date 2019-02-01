@@ -71,7 +71,7 @@
 6000 rem handle keyboard input
 6010 KB=peek(203)
 6020 if KB=10 then PX=PX-5: rem A is left
-6025 if PX<5 then PX=5: rem MIN X
+6025 if PX<48 then PX=48: rem MIN X
 6030 if KB=13 then PX=PX+5: rem S is right
 6035 if PX <= 255 then poke 53248, PX: POKE 53264, PEEK(53264) AND 14
 6038 IF PX>327 THEN PX=327: REM MAX X
