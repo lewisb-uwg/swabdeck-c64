@@ -8,6 +8,7 @@
  50 B1=SD+128: B2=SD+192: rem bird animation frame addresses
  55 BX=30: BY=80: rem bird x,y coords
 100 rem game setup
+105 poke 53281,0: rem black background
 110 rem gosub 1000: rem configure multicolor mode
 120 gosub 2000: rem load character data
 130 gosub 50000: rem draw screen
