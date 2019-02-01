@@ -4,7 +4,7 @@
  20 CD=12288: rem chardata start address
  30 SD=CD-(64*6): rem sprite data start address
  40 P1=SD: P2=SD+64: rem pirate animation frame addresses
- 45 PX=60: PY=150: rem pirate x,y coords
+ 45 PX=30: PY=200: rem pirate x,y coords
  50 B1=SD+128: B2=SD+192: rem bird animation frame addresses
  55 BX=30: BY=80: rem bird x,y coords
 100 rem game setup
@@ -36,14 +36,9 @@
 3020 read P
 3030 poke I, P
 3040 next I
-3041 poke 53285,3: rem sprite 01 color = cyan
-3043 poke 53286,6: rem sprite 11 color = blue
 3045 poke 2040,P1/64: rem initial pirate frame
 3048 poke 2041,B1/64: rem initial bird frame
 3049 poke 53269,3: rem perma-enable pirate and bird sprites
 3050 poke 53248,PX: poke 53249,PY: rem initial pirate locs
-3055 poke 53276,3: rem all sprites in multicolor mode
-3058 poke 53287,9: rem pirate's 10 color = brown
 3060 poke 53250,BX: poke 53251,BY: rem initial bird locs
-3070 poke 53288,1: rem bird's color = white
 3100 return
