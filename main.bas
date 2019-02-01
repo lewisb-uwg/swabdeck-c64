@@ -1,25 +1,30 @@
   0 rem chardata should begin at line 30000
   1 rem spritedata should begin at line 40000
- 10 rem constants
+ 10 rem constants/game state
  20 CD=12288: rem chardata start address
  30 SD=CD-(64*6): rem sprite data start address
  40 P1=SD: P2=SD+64: rem pirate animation frame addresses
+ 41 NF=16: rem max frames in the global animation loop; should be div-by-8
+ 43 rem game state variables
  45 PX=60: PY=150: rem pirate x,y coords
  50 B1=SD+128: B2=SD+192: rem bird animation frame addresses
  55 BX=30: BY=80: rem bird x,y coords
+ 60 FR=0: rem current frame in the global animation loop
 100 rem game setup
 105 poke 53281,0: rem black background
 110 rem gosub 1000: rem configure multicolor mode
 120 gosub 2000: rem load character data
 130 gosub 50000: rem draw screen
 135 gosub 3000: rem load sprite data
+138 gosub 3500: rem configure sprites
 140 rem main game loop
-150 rem render pirate
-160 rem render bird
+150 gosub 4000: rem render current pirate frame
+160 gosub 5000: rem render bird
 170 rem render coconuts
 180 rem check collisions
 190 rem check for endgame
-200 rem goto 140
+195 FR = FR+1: if FR=NF then FR=0: rem update current animation frame
+200 goto 140
 210 end
 1000 rem configure multicolor mode
 1010 poke 53270, peek(53270) or 16: rem activate multicolor mode
@@ -37,14 +42,26 @@
 3020 read P
 3030 poke I, P
 3040 next I
-3041 poke 53285,3: rem sprite 01 color = cyan
-3043 poke 53286,6: rem sprite 11 color = blue
-3045 poke 2040,P1/64: rem initial pirate frame
-3048 poke 2041,B1/64: rem initial bird frame
-3049 poke 53269,3: rem perma-enable pirate and bird sprites
-3050 poke 53248,PX: poke 53249,PY: rem initial pirate locs
-3055 poke 53276,3: rem all sprites in multicolor mode
-3058 poke 53287,9: rem pirate's 10 color = brown
-3060 poke 53250,BX: poke 53251,BY: rem initial bird locs
-3070 poke 53288,1: rem bird's color = white
-3100 return
+3050 return
+3500 rem configure sprites
+3501 poke 53285,3: rem sprite 01 color = cyan
+3510 poke 53286,6: rem sprite 11 color = blue
+3520 poke 2040,P1/64: rem initial pirate frame
+3530 poke 2041,B1/64: rem initial bird frame
+3540 poke 53269,3: rem perma-enable pirate and bird sprites
+3550 poke 53248,PX: poke 53249,PY: rem initial pirate locs
+3560 poke 53276,3: rem all sprites in multicolor mode
+3570 poke 53287,9: rem pirate's 10 color = brown
+3580 poke 53250,BX: poke 53251,BY: rem initial bird locs
+3590 poke 53288,1: rem bird's color = white
+3600 return
+4000 rem render current pirate frame
+4010 if FR=4 or FR=12 then poke 2040,P2/64
+4020 if FR=0 or FR=8 then poke 2040,P1/64
+4030 return
+5000 rem render bird
+5010 for I=0 to NF step 2
+5020 if FR=I then poke 2041,B1/64: goto 5050
+5030 next I
+5040 poke 2041,B2/64
+5050 return
