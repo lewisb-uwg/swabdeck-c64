@@ -15,11 +15,10 @@
 65  BX=30: BY=50: rem bird x,y coords
 70  FR=0: rem current frame in the global animation loop
 75  dim CN(4,5): rem coconut objects: CN(i,1)->pixel ptr, CN(i,2)->X, CN(i,3)->Y
-80  for I=1 to 4: CN(I,P)=2041+I: CN(I,X)=CN(I,Y)=0: next I: rem init the coconuts
+80  for I=1 to 4: CN(I,P)=2041+I: CN(I,X)=0:CN(I,Y)=0: next I: rem init the coconuts
 85  C1=B2+64: C2=C1+64: rem coconut animation frame addresses
 90  CN(1,E)=4: CN(2,E)=8: CN(3,E)=16: CN(4,E)=32: rem enable masks for 53269
 95  for I=1 to 4: CN(I,S)=0: next I: rem mark all as ready to plan
-98 gosub 10000: end: rem examine coconut variable state
 100 rem game setup
 105 poke 53281,0: rem black background
 110 rem gosub 1000: rem configure multicolor mode
@@ -121,7 +120,7 @@
 9510 for I=1 to 4
 9520 if CN(I,S)<>2 goto 9700
 9530 CN(I,Y)=CN(I,Y)+10
-9535 poke 53251+(2*I),C(I,Y): rem coconut y-coord
+9535 poke 53251+(2*I),CN(I,Y): rem coconut y-coord
 9540 if CN(I,Y)>=(PY+24) then CN(I,Y)=PY+24: CN(I,S)=3: rem it hit the deck
 9700 next
 9710 return
