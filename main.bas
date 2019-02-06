@@ -44,14 +44,14 @@
 1040 return
 2000 rem load character data
 2010 for C=CD+(0*8) to CD+(16*8) step 8: rem start char to end char
-2020 for I=0 to 7: read P: poke C+I,P: next I
+2020 for I=0 to 7: read R: poke C+I,R: next I
 2030 next C
 2040 rem poke 53272, 28: rem redirect to the new charset
 2050 return
 3000 rem load sprite data
 3010 for I=SD to SD+(64*6)-1
-3020 read P
-3030 poke I, P
+3020 read R
+3030 poke I, R
 3040 next I
 3050 return
 3500 rem configure sprites
@@ -69,7 +69,7 @@
 3610 poke CN(I,P), C1/64: rem init coconut to 1st frame
 3615 poke 53288+I,1: rem init all coconuts to white (for now)
 3620 poke 53269, peek(53269) and (not(CN(I,E))): rem clear enable bits
-3630 next
+3630 next I
 3800 return
 4000 rem render current pirate frame
 4010 if FR=4 or FR=12 then poke 2040,P2/64
@@ -104,6 +104,7 @@
 8010 for I=1 to 4
 8020 if CN(I,S)=0 then CN(I,S)=1: CN(I,X)=200: CN(I,Y)=100: rem defined drop zones...for now
 8030 next I
+8035 gosub 10000: end: rem debug and exit
 8040 return
 9000 rem check for coconut drop
 9010 for I=1 to 4
