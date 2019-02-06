@@ -121,7 +121,7 @@
 9520 if CN(I,S)<>2 goto 9700
 9530 CN(I,Y)=CN(I,Y)+10
 9535 poke 53251+(2*I),CN(I,Y): rem coconut y-coord
-9540 if CN(I,Y)>=PY then CN(I,Y)=PY: CN(I,S)=3: rem it hit the deck
+9540 if CN(I,Y)>=PY then CN(I,Y)=PY+1: CN(I,S)=3: rem it hit the deck
 9700 next
 9710 return
 10000 rem examine coconut variable state
@@ -136,6 +136,7 @@
 11000 rem check for collisions
 11020 for I=1 to 4
 11030 A=peek(53278)
-11040 if A=OV(I) and C(I,Y)<>PY then ?"game over": end: rem hit on hed now Im ded
+11040 if A=OV(I) and CN(I,Y)<PY then ?"game over": end: rem hit on hed now Im ded
+11045 if A=OV(I) then CN(I,S)=0: poke 53269, peek(53269) and (not(CN(I,E))): rem clear enable bits
 11050 next I
 11060 return
