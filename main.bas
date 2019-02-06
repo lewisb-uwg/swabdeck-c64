@@ -104,7 +104,6 @@
 8010 for I=1 to 4
 8020 if CN(I,S)=0 then CN(I,S)=1: CN(I,X)=200: CN(I,Y)=100: rem defined drop zones...for now
 8030 next I
-8035 gosub 10000: end: rem debug and exit
 8040 return
 9000 rem check for coconut drop
 9010 for I=1 to 4
