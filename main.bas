@@ -107,7 +107,7 @@
 8040 return
 9000 rem check for coconut drop
 9010 for I=1 to 4
-9020 if CN(I,X)<BX goto 9100: rem dont drop if bird not to drop zone
+9020 if CN(I,X)>BX goto 9100: rem dont drop if bird not to drop zone
 9030 if CN(I,S)<>1 goto 9100: rem dont drop if coconut not ready
 9040 CN(I,S)=2: rem move to the dropping state
 9050 poke 53269, peek(53269) or CN(I,E): rem enable the sprite
