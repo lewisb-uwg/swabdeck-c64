@@ -69,6 +69,7 @@
 3610 poke CN(I,P), C1/64: rem init coconut to 1st frame
 3615 poke 53288+I,1: rem init all coconuts to white (for now)
 3620 poke 53269, peek(53269) and (not(CN(I,E))): rem clear enable bits
+3625 poke 53276, peek(53276) or CN(I,E): rem enable multicolor mode for coconuts
 3630 next I
 3800 return
 4000 rem render current pirate frame
