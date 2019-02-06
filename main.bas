@@ -137,6 +137,8 @@
 11020 for I=1 to 4
 11030 A=peek(53278)
 11040 if A=OV(I) and CN(I,Y)<PY then ?"game over": end: rem hit on hed now Im ded
-11045 if A=OV(I) then CN(I,S)=0: poke 53269, peek(53269) and (not(CN(I,E))): rem clear enable bits
+11045 if A<>OV(I) goto 11050
+11046 poke 53269, peek(53269) and (not(CN(I,E))): rem clear enable bits
+11047 CN(I,S)=0: CN(I,Y)=0: poke 53251+(2*I), 0: rem reset coconuts for next pass
 11050 next I
 11060 return
