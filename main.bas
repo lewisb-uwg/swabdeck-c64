@@ -2,6 +2,7 @@
 5   rem spritedata should begin at line 40000
 10   rem screen routine should begin at line 50000
 15  rem constants/game state
+18  dim OV(4): OV(1)=5: OV(2)=9: OV(3)=17: OV(4)=33: rem coll values of P-C(I)
 20  BS=5: rem Bird Speed
 25  CD=12288: rem chardata start address
 30  SD=CD-(64*6): rem sprite data start address
@@ -32,7 +33,7 @@
 155 gosub 7000: rem move bird
 160 gosub 5000: rem render current bird frame
 170 gosub 9500:rem render coconuts
-180 rem check collisions
+180 gosub 11000: rem check collisions
 190 rem check for endgame
 195 FR = FR+1: if FR=NF then FR=0: rem update current animation frame
 200 goto 140
@@ -132,3 +133,9 @@
 10060 ?STR$(I) + "s" +str$(CN(I,S))
 10070 next I
 10080 return
+11000 rem check for collisions
+11020 for I=1 to 4
+11030 A=peek(53278)
+11040 if A=OV(I) and C(I,Y)<>PY then ?"game over": end: rem hit on hed now Im ded
+11050 next I
+11060 return
