@@ -101,16 +101,14 @@
 7030 gosub 9000: rem check for coconut drop
 7100 return
 8000 rem plan for coconuts (decides which will drop, and at what X, this pass of the bird)
-8005 ?"dropping"
 8010 for I=1 to 4
-8020 if CN(I,S)=0 then CN(I,S)=1: CN(I,X)=200: CN(I,Y)=100: rem defined drop zones...for now
+8020 if CN(I,S)=0 then CN(I,S)=1: CN(I,X)=I*50: CN(I,Y)=BY: rem defined drop zones...for now
 8030 next I
 8040 return
 9000 rem check for coconut drop
 9010 for I=1 to 4
-9020 rem if CN(I,X)<BX goto 9100: rem dont drop if bird not to drop zone
+9020 if CN(I,X)<BX goto 9100: rem dont drop if bird not to drop zone
 9030 if CN(I,S)<>1 goto 9100: rem dont drop if coconut not ready
-9035 ?"should be dropping"
 9040 CN(I,S)=2: rem move to the dropping state
 9050 poke 53269, peek(53269) or CN(I,E): rem enable the sprite
 9065 poke 53250+(2*I),CN(I,X): rem coconut x-coord
@@ -122,7 +120,7 @@
 9520 if CN(I,S)<>2 goto 9700
 9530 CN(I,Y)=CN(I,Y)+10
 9535 poke 53251+(2*I),CN(I,Y): rem coconut y-coord
-9540 if CN(I,Y)>=(PY+24) then CN(I,Y)=PY+24: CN(I,S)=3: rem it hit the deck
+9540 if CN(I,Y)>=PY then CN(I,Y)=PY: CN(I,S)=3: rem it hit the deck
 9700 next
 9710 return
 10000 rem examine coconut variable state
