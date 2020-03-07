@@ -1,4 +1,4 @@
-*=$3800
+*=$3000
 CHARDATA
         BYTE    $AA,$FF,$5F,$FF,$FF,$F7,$FF,$AA ; CHARACTER 0
         BYTE    $AA,$FF,$FF,$DF,$FF,$FD,$7F,$AA ; CHARACTER 1
