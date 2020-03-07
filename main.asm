@@ -55,21 +55,35 @@ defm set_dest
         jsr ENABLE_MULTICOLOR_CHAR_MODE
         jsr SET_SHARED_SCREEN_COLORS
         jsr REDIRECT_TO_CUSTOM_CHARSET
+        jsr APPLY_PER_CHAR_COLORS
         rts
         
 REDIRECT_TO_CUSTOM_CHARSET
-        ;lda $D018
-        ;and $F1
-        ;ora #CHAR_DATA_MULTIPLIER
-        ;ora $0E
         lda #28
         sta $D018
         rts
-        
+
+APPLY_PER_CHAR_COLORS
+        set_dest $D800
+        set_src $9800
+        jsr MOVE_256_BYTES
+
+        set_dest $D900
+        set_src $9900
+        jsr MOVE_256_BYTES
+
+        set_dest $DA00
+        set_src $9A00
+        jsr MOVE_256_BYTES
+
+        set_dest $DB00
+        set_src $9B00
+        jsr MOVE_256_BYTES
+
+        rts
 
 ; copies _screen_data to the the screen ram at $0400
 ; even though screen data is only 1000 bytes, it will copy 1024!!!
-
 COPY_SCREEN_DATA_TO_SCREEN_RAM
         ; first 256-byte block is $0400-$04FF, from
         set_dest $0400
