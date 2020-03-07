@@ -52,7 +52,7 @@ defm set_dest
 
         jsr COPY_SCREEN_DATA_TO_SCREEN_RAM
         jsr ENABLE_MULTICOLOR_CHAR_MODE
-        ;jsr SET_SHARED_SCREEN_COLORS
+        jsr SET_SHARED_SCREEN_COLORS
         rts
 
 

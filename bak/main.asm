@@ -23,29 +23,32 @@ DEST_HI=DEST+1
 defm set_src
         ldy #0
         lda #>/1
-        sta (SRC_HI),Y
+        sta SRC_HI
         lda #</1
-        sta (SRC),Y
+        sta SRC
         endm
 
 ; /1 : dest address
 defm set_dest
         ldy #0
         lda #>/1
-        sta (DEST_HI),Y
+        sta DEST_HI
         lda #</1
-        sta (DEST),Y
+        sta DEST
         endm
 
 ; 10 SYS (2049)
 
+; 10 SYS (2064)
+
 *=$0801
 
-        BYTE    $0E, $08, $0A, $00, $9E, $20, $28,  $32, $30, $34, $39, $29, $00, $00, $00
+        BYTE    $0E, $08, $0A, $00, $9E, $20, $28,  $32, $30, $36, $34, $29, $00, $00, $00
+
 
 
 ; program entrance
-*=$0801
+*=$0810
 
         jsr COPY_SCREEN_DATA_TO_SCREEN_RAM
         jsr ENABLE_MULTICOLOR_CHAR_MODE
@@ -86,8 +89,8 @@ COPY_SCREEN_DATA_TO_SCREEN_RAM
 ; DEST: first (low) byte of address containing the destination address
 ; corrupts registers A and Y
 MOVE_256_BYTES
-@loop   ldy #0
-        lda (SRC),Y
+        ldy #0
+@loop   lda (SRC),Y
         sta (DEST),Y
         iny ; note that this will rollover to zero at "y=256"
         bne @loop

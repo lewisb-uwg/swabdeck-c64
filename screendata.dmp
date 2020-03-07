@@ -50,126 +50,126 @@
 00050  0810             ; PROGRAM ENTRANCE
 00051  0810             *=$0810
 00052  0810             
-00053  0810  20 17 08              JSR COPY_SCREEN_DATA_TO_SCREEN_RAM
-00054  0813  20 7E 08              JSR ENABLE_MULTICOLOR_CHAR_MODE
-00055  0816                        ;JSR SET_SHARED_SCREEN_COLORS
-00056  0816  60                    RTS
-00057  0817             
-00058  0817             
-00059  0817             
-00060  0817             
-00061  0817             ; COPIES _SCREEN_DATA TO THE THE SCREEN RAM AT $0400
-00062  0817             ; EVEN THOUGH SCREEN DATA IS ONLY 1000 BYTES, IT WILL COPY 1024!!!
-00063  0817             
-00064  0817             COPY_SCREEN_DATA_TO_SCREEN_RAM 
-00065  0817                        ; FIRST 256-BYTE BLOCK IS $0400-$04FF, FROM
-00066  0817             
-00067  0817             
-00068  0817  A0 00                 LDY #0
-00069  0819  A9 04                 LDA #>$0400
-00070  081B  85 C3                 STA DEST_HI
-00071  081D  A9 00                 LDA #<$0400
-00072  081F  85 C2                 STA DEST
-00073  0821             
-00074  0821             
-00075  0821  A0 00                 LDY #0
-00076  0823  A9 9C                 LDA #>SD_BLOCK_1
-00077  0825  85 C1                 STA SRC_HI
-00078  0827  A9 00                 LDA #<SD_BLOCK_1
-00079  0829  85 C0                 STA SRC
-00080  082B  20 74 08              JSR MOVE_256_BYTES
-00081  082E                        
-00082  082E                        ; SECOND 256-BYTE BLOCK IS $0500-$05FF
-00083  082E             
-00084  082E             
-00085  082E  A0 00                 LDY #0
-00086  0830  A9 05                 LDA #>$0500
-00087  0832  85 C3                 STA DEST_HI
-00088  0834  A9 00                 LDA #<$0500
-00089  0836  85 C2                 STA DEST
-00090  0838             
-00091  0838             
-00092  0838  A0 00                 LDY #0
-00093  083A  A9 9D                 LDA #>SD_BLOCK_2
-00094  083C  85 C1                 STA SRC_HI
-00095  083E  A9 00                 LDA #<SD_BLOCK_2
-00096  0840  85 C0                 STA SRC
-00097  0842  20 74 08              JSR MOVE_256_BYTES
-00098  0845             
-00099  0845                        ; THIRD 256-BYTE BLOCK IS $0600-$06FF
-00100  0845             
-00101  0845             
-00102  0845  A0 00                 LDY #0
-00103  0847  A9 06                 LDA #>$0600
-00104  0849  85 C3                 STA DEST_HI
-00105  084B  A9 00                 LDA #<$0600
-00106  084D  85 C2                 STA DEST
-00107  084F             
-00108  084F             
-00109  084F  A0 00                 LDY #0
-00110  0851  A9 9E                 LDA #>SD_BLOCK_3
-00111  0853  85 C1                 STA SRC_HI
-00112  0855  A9 00                 LDA #<SD_BLOCK_3
-00113  0857  85 C0                 STA SRC
-00114  0859  20 74 08              JSR MOVE_256_BYTES
-00115  085C             
-00116  085C                        ; FOURTH 256-BYTE BLOCK IS $0700-$07FF
-00117  085C             
-00118  085C             
-00119  085C  A0 00                 LDY #0
-00120  085E  A9 07                 LDA #>$0700
-00121  0860  85 C3                 STA DEST_HI
-00122  0862  A9 00                 LDA #<$0700
-00123  0864  85 C2                 STA DEST
-00124  0866             
-00125  0866             
-00126  0866  A0 00                 LDY #0
-00127  0868  A9 9F                 LDA #>SD_BLOCK_4
-00128  086A  85 C1                 STA SRC_HI
-00129  086C  A9 00                 LDA #<SD_BLOCK_4
-00130  086E  85 C0                 STA SRC
-00131  0870  20 74 08              JSR MOVE_256_BYTES
-00132  0873             
-00133  0873  60                    RTS
-00134  0874             
-00135  0874             ; COPIES 256 TYES FROM SRC TO DEST
-00136  0874             ; SRC: FIRST (LOW) BYTE OF ADDRESS CONTAINING THE SOURCE ADDRESS
-00137  0874             ; DEST: FIRST (LOW) BYTE OF ADDRESS CONTAINING THE DESTINATION ADDRESS
-00138  0874             ; CORRUPTS REGISTERS A AND Y
-00139  0874             MOVE_256_BYTES 
-00140  0874  A0 00                 LDY #0
-00141  0876  B1 C0      @LOOP      LDA (SRC),Y
-00142  0878  91 C2                 STA (DEST),Y
-00143  087A  C8                    INY ; NOTE THAT THIS WILL ROLLOVER TO ZERO AT "Y=256"
-00144  087B  D0 F9                 BNE @LOOP
-00145  087D  60                    RTS
-00146  087E             
-00147  087E             
-00148  087E             
-00149  087E             ; LDA WILL BE CORRUPTED
-00150  087E             ENABLE_MULTICOLOR_CHAR_MODE 
-00151  087E  AD 16 D0              LDA $D016
-00152  0881  09 10                 ORA #16
-00153  0883  8D 16 D0              STA $D016
-00154  0886  60                    RTS
-00155  0887             
-00156  0887             ; LDA WILL BE CORRUPTED
-00157  0887             SET_SHARED_SCREEN_COLORS 
-00158  0887                        ; SET THE 00 COLOR
-00159  0887  A9 00                 LDA #BLACK
-00160  0889  8D 21 D0              STA $D021
-00161  088C             
-00162  088C                        ; SET THE 01 COLOR
-00163  088C  A9 0C                 LDA #GREY2
-00164  088E  8D 22 D0              STA $D022
-00165  0891             
-00166  0891                        ; SET THE 10 COLOR
-00167  0891  A9 04                 LDA #VIOLET
-00168  0893  8D 23 D0              STA $D023
-00169  0896             
-00170  0896  60                    RTS
-00171  0897             
-00172  0897             *=$3800
+00053  0810  20 1A 08              JSR COPY_SCREEN_DATA_TO_SCREEN_RAM
+00054  0813  20 81 08              JSR ENABLE_MULTICOLOR_CHAR_MODE
+00055  0816  20 8A 08              JSR SET_SHARED_SCREEN_COLORS
+00056  0819  60                    RTS
+00057  081A             
+00058  081A             
+00059  081A             
+00060  081A             
+00061  081A             ; COPIES _SCREEN_DATA TO THE THE SCREEN RAM AT $0400
+00062  081A             ; EVEN THOUGH SCREEN DATA IS ONLY 1000 BYTES, IT WILL COPY 1024!!!
+00063  081A             
+00064  081A             COPY_SCREEN_DATA_TO_SCREEN_RAM 
+00065  081A                        ; FIRST 256-BYTE BLOCK IS $0400-$04FF, FROM
+00066  081A             
+00067  081A             
+00068  081A  A0 00                 LDY #0
+00069  081C  A9 04                 LDA #>$0400
+00070  081E  85 C3                 STA DEST_HI
+00071  0820  A9 00                 LDA #<$0400
+00072  0822  85 C2                 STA DEST
+00073  0824             
+00074  0824             
+00075  0824  A0 00                 LDY #0
+00076  0826  A9 9C                 LDA #>SD_BLOCK_1
+00077  0828  85 C1                 STA SRC_HI
+00078  082A  A9 00                 LDA #<SD_BLOCK_1
+00079  082C  85 C0                 STA SRC
+00080  082E  20 77 08              JSR MOVE_256_BYTES
+00081  0831                        
+00082  0831                        ; SECOND 256-BYTE BLOCK IS $0500-$05FF
+00083  0831             
+00084  0831             
+00085  0831  A0 00                 LDY #0
+00086  0833  A9 05                 LDA #>$0500
+00087  0835  85 C3                 STA DEST_HI
+00088  0837  A9 00                 LDA #<$0500
+00089  0839  85 C2                 STA DEST
+00090  083B             
+00091  083B             
+00092  083B  A0 00                 LDY #0
+00093  083D  A9 9D                 LDA #>SD_BLOCK_2
+00094  083F  85 C1                 STA SRC_HI
+00095  0841  A9 00                 LDA #<SD_BLOCK_2
+00096  0843  85 C0                 STA SRC
+00097  0845  20 77 08              JSR MOVE_256_BYTES
+00098  0848             
+00099  0848                        ; THIRD 256-BYTE BLOCK IS $0600-$06FF
+00100  0848             
+00101  0848             
+00102  0848  A0 00                 LDY #0
+00103  084A  A9 06                 LDA #>$0600
+00104  084C  85 C3                 STA DEST_HI
+00105  084E  A9 00                 LDA #<$0600
+00106  0850  85 C2                 STA DEST
+00107  0852             
+00108  0852             
+00109  0852  A0 00                 LDY #0
+00110  0854  A9 9E                 LDA #>SD_BLOCK_3
+00111  0856  85 C1                 STA SRC_HI
+00112  0858  A9 00                 LDA #<SD_BLOCK_3
+00113  085A  85 C0                 STA SRC
+00114  085C  20 77 08              JSR MOVE_256_BYTES
+00115  085F             
+00116  085F                        ; FOURTH 256-BYTE BLOCK IS $0700-$07FF
+00117  085F             
+00118  085F             
+00119  085F  A0 00                 LDY #0
+00120  0861  A9 07                 LDA #>$0700
+00121  0863  85 C3                 STA DEST_HI
+00122  0865  A9 00                 LDA #<$0700
+00123  0867  85 C2                 STA DEST
+00124  0869             
+00125  0869             
+00126  0869  A0 00                 LDY #0
+00127  086B  A9 9F                 LDA #>SD_BLOCK_4
+00128  086D  85 C1                 STA SRC_HI
+00129  086F  A9 00                 LDA #<SD_BLOCK_4
+00130  0871  85 C0                 STA SRC
+00131  0873  20 77 08              JSR MOVE_256_BYTES
+00132  0876             
+00133  0876  60                    RTS
+00134  0877             
+00135  0877             ; COPIES 256 TYES FROM SRC TO DEST
+00136  0877             ; SRC: FIRST (LOW) BYTE OF ADDRESS CONTAINING THE SOURCE ADDRESS
+00137  0877             ; DEST: FIRST (LOW) BYTE OF ADDRESS CONTAINING THE DESTINATION ADDRESS
+00138  0877             ; CORRUPTS REGISTERS A AND Y
+00139  0877             MOVE_256_BYTES 
+00140  0877  A0 00                 LDY #0
+00141  0879  B1 C0      @LOOP      LDA (SRC),Y
+00142  087B  91 C2                 STA (DEST),Y
+00143  087D  C8                    INY ; NOTE THAT THIS WILL ROLLOVER TO ZERO AT "Y=256"
+00144  087E  D0 F9                 BNE @LOOP
+00145  0880  60                    RTS
+00146  0881             
+00147  0881             
+00148  0881             
+00149  0881             ; LDA WILL BE CORRUPTED
+00150  0881             ENABLE_MULTICOLOR_CHAR_MODE 
+00151  0881  AD 16 D0              LDA $D016
+00152  0884  09 10                 ORA #16
+00153  0886  8D 16 D0              STA $D016
+00154  0889  60                    RTS
+00155  088A             
+00156  088A             ; LDA WILL BE CORRUPTED
+00157  088A             SET_SHARED_SCREEN_COLORS 
+00158  088A                        ; SET THE 00 COLOR
+00159  088A  A9 00                 LDA #BLACK
+00160  088C  8D 21 D0              STA $D021
+00161  088F             
+00162  088F                        ; SET THE 01 COLOR
+00163  088F  A9 0C                 LDA #GREY2
+00164  0891  8D 22 D0              STA $D022
+00165  0894             
+00166  0894                        ; SET THE 10 COLOR
+00167  0894  A9 04                 LDA #VIOLET
+00168  0896  8D 23 D0              STA $D023
+00169  0899             
+00170  0899  60                    RTS
+00171  089A             
+00172  089A             *=$3800
 00173  3800             CHARDATA
 00174  3800  AA FF 5F              BYTE    $AA,$FF,$5F,$FF,$FF,$F7,$FF,$AA ; CHARACTER 0
 00175  3808  AA FF FF              BYTE    $AA,$FF,$FF,$DF,$FF,$FD,$7F,$AA ; CHARACTER 1
@@ -253,10 +253,10 @@
 _colour_data = $9800 
 _screen_data = $9C00 
 CHARDATA = $3800 
-COPY_SCREEN_DATA_TO_SCREEN_RAM = $0817 
-ENABLE_MULTICOLOR_CHAR_MODE = $087E 
-MOVE_256_BYTES = $0874 
-SET_SHARED_SCREEN_COLORS = $0887 
+COPY_SCREEN_DATA_TO_SCREEN_RAM = $081A 
+ENABLE_MULTICOLOR_CHAR_MODE = $0881 
+MOVE_256_BYTES = $0877 
+SET_SHARED_SCREEN_COLORS = $088A 
 
 ******* 6 Unused label(s) *******
 @loop
