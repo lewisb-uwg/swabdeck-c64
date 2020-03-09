@@ -141,7 +141,7 @@
     </sdata>
    </sprite>
   <sprite>
-    <description>coconut flat</description>
+    <description>coconut horz</description>
     <links></links>
     <include>True</include>
     <multi>True</multi>
@@ -176,7 +176,7 @@
     </sdata>
    </sprite>
   <sprite>
-    <description>coconut flat</description>
+    <description>coconut vert</description>
     <links></links>
     <include>True</include>
     <multi>True</multi>

@@ -1,0 +1,151 @@
+*=$2e80
+; pirate_standing
+_pirate_standing
+         BYTE $0A,$80,$00
+         BYTE $2A,$A0,$00
+         BYTE $2A,$A0,$00
+         BYTE $AA,$A0,$00
+         BYTE $87,$50,$00
+         BYTE $85,$50,$00
+         BYTE $05,$40,$00
+         BYTE $0F,$C0,$00
+         BYTE $2F,$E0,$00
+         BYTE $AF,$E8,$00
+         BYTE $97,$E8,$00
+         BYTE $A5,$E8,$00
+         BYTE $AA,$6A,$00
+         BYTE $AA,$9A,$00
+         BYTE $3F,$D6,$00
+         BYTE $3F,$F5,$00
+         BYTE $0F,$C1,$40
+         BYTE $2B,$A0,$50
+         BYTE $28,$A0,$D7
+         BYTE $A8,$A0,$D7
+         BYTE $A8,$A3,$55
+         BYTE $00
+
+; pirate_running
+_pirate_running
+         BYTE $00,$A8,$00
+         BYTE $02,$AA,$00
+         BYTE $02,$AA,$00
+         BYTE $0A,$AA,$00
+         BYTE $08,$75,$00
+         BYTE $08,$55,$00
+         BYTE $00,$54,$00
+         BYTE $01,$FC,$00
+         BYTE $01,$FA,$00
+         BYTE $09,$7A,$00
+         BYTE $0A,$AE,$00
+         BYTE $0A,$A6,$00
+         BYTE $03,$D6,$00
+         BYTE $03,$F6,$80
+         BYTE $03,$F6,$80
+         BYTE $03,$FD,$C0
+         BYTE $0A,$FD,$40
+         BYTE $2A,$3A,$40
+         BYTE $28,$0A,$40
+         BYTE $28,$02,$50
+         BYTE $28,$0D,$54
+         BYTE $00
+
+; seagull_wings_up
+_seagull_wings_up
+         BYTE $00,$00,$00
+         BYTE $00,$50,$00
+         BYTE $01,$54,$00
+         BYTE $05,$55,$00
+         BYTE $15,$05,$00
+         BYTE $00,$05,$40
+         BYTE $00,$15,$04
+         BYTE $01,$55,$55
+         BYTE $55,$55,$54
+         BYTE $05,$55,$50
+         BYTE $01,$55,$00
+         BYTE $05,$40,$00
+         BYTE $04,$00,$00
+         BYTE $00,$00,$00
+         BYTE $00,$00,$00
+         BYTE $00,$00,$00
+         BYTE $00,$00,$00
+         BYTE $00,$00,$00
+         BYTE $00,$00,$00
+         BYTE $00,$00,$00
+         BYTE $00,$00,$00
+         BYTE $00
+
+; seagull_wings_down
+_seagull_wings_down
+         BYTE $00,$00,$00
+         BYTE $00,$00,$00
+         BYTE $00,$00,$00
+         BYTE $00,$00,$00
+         BYTE $00,$00,$00
+         BYTE $00,$00,$04
+         BYTE $00,$00,$05
+         BYTE $01,$55,$54
+         BYTE $55,$55,$54
+         BYTE $05,$55,$50
+         BYTE $01,$55,$00
+         BYTE $01,$54,$00
+         BYTE $00,$50,$00
+         BYTE $01,$40,$00
+         BYTE $05,$00,$00
+         BYTE $00,$00,$00
+         BYTE $00,$00,$00
+         BYTE $00,$00,$00
+         BYTE $00,$00,$00
+         BYTE $00,$00,$00
+         BYTE $00,$00,$00
+         BYTE $00
+
+; coconut_flat
+_coconut_flat
+         BYTE $00,$00,$00
+         BYTE $00,$00,$00
+         BYTE $00,$00,$00
+         BYTE $00,$00,$00
+         BYTE $00,$00,$00
+         BYTE $00,$00,$00
+         BYTE $00,$00,$00
+         BYTE $00,$00,$00
+         BYTE $00,$00,$00
+         BYTE $00,$00,$00
+         BYTE $00,$00,$00
+         BYTE $00,$00,$00
+         BYTE $00,$00,$00
+         BYTE $00,$00,$00
+         BYTE $00,$00,$00
+         BYTE $00,$2A,$00
+         BYTE $00,$AA,$80
+         BYTE $00,$AA,$80
+         BYTE $00,$AA,$80
+         BYTE $00,$2A,$00
+         BYTE $00,$00,$00
+         BYTE $00
+
+; coconut_vert
+_coconut_vert
+         BYTE $00,$00,$00
+         BYTE $00,$00,$00
+         BYTE $00,$00,$00
+         BYTE $00,$00,$00
+         BYTE $00,$00,$00
+         BYTE $00,$00,$00
+         BYTE $00,$00,$00
+         BYTE $00,$00,$00
+         BYTE $00,$00,$00
+         BYTE $00,$00,$00
+         BYTE $00,$00,$00
+         BYTE $00,$00,$00
+         BYTE $00,$00,$00
+         BYTE $00,$00,$00
+         BYTE $00,$08,$00
+         BYTE $00,$2A,$00
+         BYTE $00,$2A,$00
+         BYTE $00,$2A,$00
+         BYTE $00,$2A,$00
+         BYTE $00,$2A,$00
+         BYTE $00,$08,$00
+         BYTE $00
+

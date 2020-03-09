@@ -7,6 +7,7 @@ GREY2=$0C
 VIOLET=$04
 SCREEN_RAM=$0400
 SCREEN_DATA=$9C00
+CHAR_DATA_MULTIPLIER=($3800/$0800)<<1
 
 sd_block_1 = $9C00
 sd_block_2 = $9C00 + 256
@@ -52,15 +53,37 @@ defm set_dest
 
         jsr COPY_SCREEN_DATA_TO_SCREEN_RAM
         jsr ENABLE_MULTICOLOR_CHAR_MODE
-        ;jsr SET_SHARED_SCREEN_COLORS
+        jsr SET_SHARED_SCREEN_COLORS
+        jsr REDIRECT_TO_CUSTOM_CHARSET
+        jsr APPLY_PER_CHAR_COLORS
+        rts
+        
+REDIRECT_TO_CUSTOM_CHARSET
+        lda #28
+        sta $D018
         rts
 
+APPLY_PER_CHAR_COLORS
+        set_dest $D800
+        set_src $9800
+        jsr MOVE_256_BYTES
 
+        set_dest $D900
+        set_src $9900
+        jsr MOVE_256_BYTES
 
+        set_dest $DA00
+        set_src $9A00
+        jsr MOVE_256_BYTES
+
+        set_dest $DB00
+        set_src $9B00
+        jsr MOVE_256_BYTES
+
+        rts
 
 ; copies _screen_data to the the screen ram at $0400
 ; even though screen data is only 1000 bytes, it will copy 1024!!!
-
 COPY_SCREEN_DATA_TO_SCREEN_RAM
         ; first 256-byte block is $0400-$04FF, from
         set_dest $0400
