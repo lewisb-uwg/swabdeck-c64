@@ -99,8 +99,8 @@ _seagull_wings_down
          BYTE $00,$00,$00
          BYTE $00
 
-; coconut_flat
-_coconut_flat
+; coconut_horz
+_coconut_horz
          BYTE $00,$00,$00
          BYTE $00,$00,$00
          BYTE $00,$00,$00

@@ -2,6 +2,7 @@
 
 ; 10 SYS (2080)
 
+; color constants
 WHITE=$01
 BLACK=$00
 GREY2=$0C
@@ -9,28 +10,43 @@ VIOLET=$04
 CYAN=$03
 BLUE=$06
 BROWN=$09
+
+; addresses of VIC-related stuff
 SCREEN_RAM=$0400
 SCREEN_DATA=$9C00
 CHAR_DATA_MULTIPLIER=($3800/$0800)<<1
 
-sd_block_1 = $9C00
-sd_block_2 = $9C00 + 256
-sd_block_3 = $9C00 + 512
-sd_block_4 = $9C00 + 768
+; 256-byte blocks of screen data, used
+; to unroll the screen setup and avoid
+; nasty 2-byte addition
+sd_block_1 = SCREEN_DATA
+sd_block_2 = SCREEN_DATA + 256
+sd_block_3 = SCREEN_DATA + 512
+sd_block_4 = SCREEN_DATA + 768
 
+; start of sprite pixel data, as a VIC offset
+sprite_data=$2E80/64
+
+; Sprite 0 (Pirate/player avatar) constants
 pirate_data_ptr = $07F8
-seagull_data_ptr = $07F9
-
 pirate_x_ptr = $D000
 pirate_y_ptr = $D001
+pirate_standing=sprite_data
+pirate_running=sprite_data+1
+
+; Sprite 1 (seagull) constants
+seagull_data_ptr = $07F9
+seagull_wings_up=sprite_data+2
+seagull_wings_down=sprite_data+3
 seagull_x_ptr = $D002
 seagull_y_ptr = $D003
 
-sprite_data=$2E80/64
-pirate_standing=sprite_data
-pirate_running=sprite_data+1
-seagull_wings_up=sprite_data+2
-seagull_wings_down=sprite_data+3
+; Sprite 2 (the "coconut") constants
+coconut_data_ptr = $07FA
+coconut_x_ptr = $D004
+coconut_y_ptr = $D005
+coconut_horz=sprite_data+4
+coconut_vert=sprite_data+5
 
 ; variables in the zero page
 SRC=$00C0
@@ -111,8 +127,27 @@ defm set_common_multicolor_sprite_colors
         jsr APPLY_PER_CHAR_COLORS
         jsr INITIALIZE_PIRATE_SPRITE
         jsr INITIALIZE_SEAGULL_SPRITE
+        jsr INITIALIZE_COCONUT_SPRITE
         set_common_multicolor_sprite_colors
         enable_sprites
+        rts
+
+INITIALIZE_COCONUT_SPRITE ; sprite 2
+        ; set the coconut's 10 color
+        lda #WHITE
+        sta $D029
+
+        ; tell VIC where the first coconut frame is
+        lda #coconut_horz
+        sta coconut_data_ptr
+        
+        ; inital coconut x (TODO: change once animations begin)
+        lda #60
+        sta coconut_x_ptr
+
+        ; initial coconut y (TODO: change once animations begin)
+        lda #100
+        sta coconut_y_ptr
         rts
 
 INITIALIZE_SEAGULL_SPRITE ; sprite 1
