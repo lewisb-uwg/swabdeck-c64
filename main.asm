@@ -53,6 +53,54 @@ SRC=$00C0
 SRC_HI=SRC+1
 DEST=SRC_HI+1
 DEST_HI=DEST+1
+LOOP_TICK=DEST_HI+1
+
+; animation/motion speed constants
+; The idea here is the main loop operates on a wrap-around tick of 256.
+; AND-ing a speed constant with the current tick means the action fires
+; if the result is nonzero. Each speed effectively represents one bit of the
+; counter and, e.g., bit-2 is twice as fast as bit-3, is twice as fast as bit-4,
+; etc.
+FASTEST_SPEED         = %00000001
+HALF_SPEED            = %00000010
+QUARTER_SPPED         = %00000100
+1_8TH_SPEED           = %00001000
+1_16TH_SPEED          = %00010000
+1_32ND_SPEED          = %00100000
+1_64TH_SPEED          = %01000000
+SLOWEST_SPEED         = %10000000
+
+; advances the seagull to the right (wrapping if necessary),
+; and switches between animation frames
+; /1 : current loop tick
+; /2 : animation speed
+; /3 : movement speed
+defm update_seagull
+        ; switch animation frame
+        lda /1
+        and #/2
+        beq @movement ; skip animation if equal (AND result of zero)
+        
+        ; perform the animation
+
+        ; pick the appropriate animation, based on contents
+        ; of seagull_data_ptr
+        lda seagull_data_ptr
+        cmp #seagull_wings_up
+        beq @choose_wings_down
+@choose_wings_up
+        lda #seagull_wings_up
+        sta seagull_data_ptr
+        jmp @movement
+
+@choose_wings_down
+        lda #seagull_wings_down
+        sta seagull_data_ptr
+        jmp @movement
+
+@movement
+        nop
+        endm
 
 ; /1 : destination address
 ; /2 : immediate value (sans #)
@@ -120,6 +168,7 @@ defm set_common_multicolor_sprite_colors
 ; program entrance
 *=$0810
 
+        ; setup phase
         jsr COPY_SCREEN_DATA_TO_SCREEN_RAM
         jsr ENABLE_MULTICOLOR_CHAR_MODE
         jsr SET_SHARED_SCREEN_COLORS
@@ -130,6 +179,27 @@ defm set_common_multicolor_sprite_colors
         jsr INITIALIZE_COCONUT_SPRITE
         set_common_multicolor_sprite_colors
         enable_sprites
+
+        ; main game loop
+        lda #$00
+        sta LOOP_TICK ; init loop tick to zero
+main_game_loop
+        ; update the pirate's location and animation
+
+        ; update the seagull's location and animation
+        update_seagull LOOP_TICK,HALF_SPEED,HALF_SPEED
+
+        ; update the coconut's location and animation
+
+        ; increment the loop tick (note it rolls over automatically)
+        lda LOOP_TICK
+        adc #1
+        sta LOOP_TICK
+
+        ; for now, infinite game loop
+        lda #0
+        beq main_game_loop
+
         rts
 
 INITIALIZE_COCONUT_SPRITE ; sprite 2
