@@ -1,4 +1,4 @@
-*=$2E80
+*=$2e80
 ; pirate_standing
 _pirate_standing
          BYTE $0A,$80,$00

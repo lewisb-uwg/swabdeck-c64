@@ -2,9 +2,13 @@
 
 ; 10 SYS (2080)
 
+
 BLACK=$00
 GREY2=$0C
 VIOLET=$04
+CYAN=$03
+BLUE=$06
+BROWN=$09
 SCREEN_RAM=$0400
 SCREEN_DATA=$9C00
 CHAR_DATA_MULTIPLIER=($3800/$0800)<<1
@@ -14,11 +18,31 @@ sd_block_2 = $9C00 + 256
 sd_block_3 = $9C00 + 512
 sd_block_4 = $9C00 + 768
 
+pirate_data_ptr = $07F8
+pirate_x_ptr = $D000
+pirate_y_ptr = $D001
+
+sprite_data=$2E80
+pirate_standing=sprite_data/64
+
 ; variables in the zero page
 SRC=$00C0
 SRC_HI=SRC+1
 DEST=SRC_HI+1
 DEST_HI=DEST+1
+
+; /1 : destination address
+; /2 : immediate value (sans #)
+defm store_2_byte_value
+        ; store the low byte
+        lda #</2
+        sta /1
+
+        ; store the hi byte
+        ldy #1
+        lda #>/2
+        sta /1,Y
+        endm
 
 ; /1 : src address
 defm set_src
@@ -36,6 +60,27 @@ defm set_dest
         sta DEST_HI
         lda #</1
         sta DEST
+        endm
+
+defm enable_sprites
+        ; sprite 0 is multicolor, sprites 1 and 2 are high-resolution
+        lda #$01
+        sta $D01C
+
+        ; turn on sprites 0, 1, and 2
+        lda #$07
+        sta $D015
+        endm
+
+defm set_common_multicolor_sprite_colors        
+        ; 01 shared color #0
+        lda #CYAN
+        sta $D025
+
+        ; 11 shared color #1
+        lda #BLUE
+        sta $D026
+
         endm
 
 ; 10 SYS (2049)
@@ -56,8 +101,29 @@ defm set_dest
         jsr SET_SHARED_SCREEN_COLORS
         jsr REDIRECT_TO_CUSTOM_CHARSET
         jsr APPLY_PER_CHAR_COLORS
+        jsr INITIALIZE_PIRATE_SPRITE
+        set_common_multicolor_sprite_colors
+        enable_sprites
         rts
-        
+
+INITIALIZE_PIRATE_SPRITE
+        ; set the pirate's 10 color
+        lda #BROWN
+        sta $D027
+
+        ; tell VIC where the first pirate frame is
+        lda #pirate_standing
+        sta pirate_data_ptr
+
+        ; initial pirate x
+        lda #60
+        sta pirate_x_ptr
+
+        ; initial pirate y
+        lda #188
+        sta pirate_y_ptr
+        rts
+      
 REDIRECT_TO_CUSTOM_CHARSET
         lda #28
         sta $D018
