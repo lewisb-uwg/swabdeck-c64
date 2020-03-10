@@ -57,18 +57,16 @@ LOOP_TICK=DEST_HI+1
 
 ; animation/motion speed constants
 ; The idea here is the main loop operates on a wrap-around tick of 256.
-; AND-ing a speed constant with the current tick means the action fires
-; if the result is nonzero. Each speed effectively represents one bit of the
-; counter and, e.g., bit-2 is twice as fast as bit-3, is twice as fast as bit-4,
-; etc.
+; the 1's patterns here determine the speed, e.g., FASTEST_SPEED happens
+; every-other tick, HALF_SPEED every fourth tick, etc.
 FASTEST_SPEED         = %00000001
-HALF_SPEED            = %00000010
-QUARTER_SPPED         = %00000100
-1_8TH_SPEED           = %00001000
-1_16TH_SPEED          = %00010000
-1_32ND_SPEED          = %00100000
-1_64TH_SPEED          = %01000000
-SLOWEST_SPEED         = %10000000
+HALF_SPEED            = %00000011
+QUARTER_SPEED         = %00000111
+1_8TH_SPEED           = %00001111
+1_16TH_SPEED          = %00011111
+1_32ND_SPEED          = %00111111
+1_64TH_SPEED          = %01111111
+SLOWEST_SPEED         = %11111111
 
 ; advances the seagull to the right (wrapping if necessary),
 ; and switches between animation frames
@@ -77,9 +75,10 @@ SLOWEST_SPEED         = %10000000
 ; /3 : movement speed
 defm update_seagull
         ; switch animation frame
-        lda /1
-        and #/2
-        beq @movement ; skip animation if equal (AND result of zero)
+        lda /1  ; load current tick
+        and #/2 ; and with the speed
+        cmp #/2 ; see if the result matches the speed
+        bne @movement ; skip animation on no match (it's not yet time to fire)
         
         ; perform the animation
 
@@ -187,7 +186,7 @@ main_game_loop
         ; update the pirate's location and animation
 
         ; update the seagull's location and animation
-        update_seagull LOOP_TICK,HALF_SPEED,HALF_SPEED
+        update_seagull LOOP_TICK,SLOWEST_SPEED,SLOWEST_SPEED
 
         ; update the coconut's location and animation
 
