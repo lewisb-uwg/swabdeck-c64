@@ -2,7 +2,7 @@
 
 ; 10 SYS (2080)
 
-
+WHITE=$01
 BLACK=$00
 GREY2=$0C
 VIOLET=$04
@@ -19,11 +19,18 @@ sd_block_3 = $9C00 + 512
 sd_block_4 = $9C00 + 768
 
 pirate_data_ptr = $07F8
+seagull_data_ptr = $07F9
+
 pirate_x_ptr = $D000
 pirate_y_ptr = $D001
+seagull_x_ptr = $D002
+seagull_y_ptr = $D003
 
-sprite_data=$2E80
-pirate_standing=sprite_data/64
+sprite_data=$2E80/64
+pirate_standing=sprite_data
+pirate_running=sprite_data+1
+seagull_wings_up=sprite_data+2
+seagull_wings_down=sprite_data+3
 
 ; variables in the zero page
 SRC=$00C0
@@ -63,8 +70,9 @@ defm set_dest
         endm
 
 defm enable_sprites
-        ; sprite 0 is multicolor, sprites 1 and 2 are high-resolution
-        lda #$01
+        ; all sprites were designed as multicolor,
+        ; even though 1 and 2 only use a single color
+        lda #$07
         sta $D01C
 
         ; turn on sprites 0, 1, and 2
@@ -102,11 +110,30 @@ defm set_common_multicolor_sprite_colors
         jsr REDIRECT_TO_CUSTOM_CHARSET
         jsr APPLY_PER_CHAR_COLORS
         jsr INITIALIZE_PIRATE_SPRITE
+        jsr INITIALIZE_SEAGULL_SPRITE
         set_common_multicolor_sprite_colors
         enable_sprites
         rts
 
-INITIALIZE_PIRATE_SPRITE
+INITIALIZE_SEAGULL_SPRITE ; sprite 1
+        ; set the gull's 10 color
+        lda #WHITE
+        sta $D028
+
+        ; tell VIC where the first gull frame is
+        lda #seagull_wings_down
+        sta seagull_data_ptr
+
+        ; initial gull x (TODO: change once animations begin)
+        lda #60
+        sta seagull_x_ptr
+
+        ; initial gull y (note: should never change)
+        lda #50
+        sta seagull_y_ptr
+        rts
+
+INITIALIZE_PIRATE_SPRITE ; sprite 2
         ; set the pirate's 10 color
         lda #BROWN
         sta $D027
@@ -119,7 +146,7 @@ INITIALIZE_PIRATE_SPRITE
         lda #60
         sta pirate_x_ptr
 
-        ; initial pirate y
+        ; initial pirate y (note: should never change)
         lda #188
         sta pirate_y_ptr
         rts
