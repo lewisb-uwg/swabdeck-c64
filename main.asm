@@ -403,5 +403,10 @@ UPDATE_SEAGULL
         jsr ADD_TO_X_COORDINATE
         lda X_TEMP
         sta seagull_x_ptr
+
+        ; not gonna check for x-axis wrapping; right now will wrap
+        ; at x=512, giving a little bit of respite for player before
+        ; the next pass. Also I'm lazy.
+        
  
 @end    rts
