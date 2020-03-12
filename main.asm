@@ -362,9 +362,6 @@ SET_SHARED_SCREEN_COLORS
 
 ; advances the seagull to the right (wrapping if necessary),
 ; and switches between animation frames
-; /1 : current loop tick
-; /2 : animation speed
-; /3 : movement speed
 UPDATE_SEAGULL
         ; switch animation frame
         lda LOOP_TICK
@@ -401,7 +398,7 @@ UPDATE_SEAGULL
         sta (SPRITE_MASK),Y
         lda seagull_x_ptr
         sta (X_TEMP),Y
-        lda #10
+        lda #1
         sta (X_INCR_VAL),Y
         jsr ADD_TO_X_COORDINATE
         lda (X_TEMP),Y
