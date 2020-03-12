@@ -199,6 +199,7 @@ init_raster_interrupt
 
 main_game_loop
         ; update the pirate's location and animation
+        jsr UPDATE_PIRATE
 
         ; update the seagull's location and animation
         jsr UPDATE_SEAGULL
@@ -396,13 +397,29 @@ SET_SHARED_SCREEN_COLORS
 
         rts
 
-; advances the seagull to the right (wrapping if necessary),
-; and switches between animation frames
+
+UPDATE_PIRATE
+        jsr DETERMINE_MOVEMENT_DISTANCE
+        ; if distance == 0 then rts
+        jsr ANIMATE_PIRATE
+        jsr MOVE_PIRATE
+        rts
+
+DETERMINE_MOVEMENT_DISTANCE
+        rts
+
+MOVE_PIRATE
+        rts
+
+ANIMATE_PIRATE
+        rts
+
 UPDATE_SEAGULL
         jsr ANIMATE_SEAGULL
         jsr MOVE_SEAGULL
         rts
 
+; switches between seagull animation frames
 ANIMATE_SEAGULL
         ; switch animation frame
         lda LOOP_TICK
@@ -427,6 +444,7 @@ ANIMATE_SEAGULL
         sta seagull_data_ptr
 @end    rts
 
+; advances the seagull to the right, wrapping around to zero appropriately
 MOVE_SEAGULL
         lda LOOP_TICK
         and #FASTEST_SPEED
