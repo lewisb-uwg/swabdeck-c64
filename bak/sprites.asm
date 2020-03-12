@@ -1,4 +1,4 @@
-*=$2e80
+*=$2E80
 ; pirate_standing
 _pirate_standing
          BYTE $0A,$80,$00
@@ -99,8 +99,8 @@ _seagull_wings_down
          BYTE $00,$00,$00
          BYTE $00
 
-; coconut_flat
-_coconut_flat
+; coconut_horz
+_coconut_horz
          BYTE $00,$00,$00
          BYTE $00,$00,$00
          BYTE $00,$00,$00

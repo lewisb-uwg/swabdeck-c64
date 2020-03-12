@@ -38,9 +38,9 @@
     </BuildEvents>
     <BuildList>
         <FileName>main.asm</FileName>
+        <FileName>sprites.asm</FileName>
         <FileName>chardata.asm</FileName>
         <FileName>screendata.asm</FileName>
-        <FileName>sprites.asm</FileName>
     </BuildList>
     <DetermineBuildOrder>0</DetermineBuildOrder>
     <PaddingByte>0</PaddingByte>
@@ -87,7 +87,7 @@
             <Regions />
             <Breakpoints />
             <Bookmarks />
-            <Topmost>True</Topmost>
+            <Topmost>False</Topmost>
             <FileOpen>True</FileOpen>
         </SourceFile>
         <SourceFile>
@@ -99,7 +99,7 @@
             <Breakpoints />
             <Bookmarks />
             <Topmost>False</Topmost>
-            <FileOpen>False</FileOpen>
+            <FileOpen>True</FileOpen>
         </SourceFile>
         <SourceFile>
             <Name>pirate.spt</Name>

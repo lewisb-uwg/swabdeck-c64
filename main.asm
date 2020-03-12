@@ -48,12 +48,20 @@ coconut_y_ptr = $D005
 coconut_horz=sprite_data+4
 coconut_vert=sprite_data+5
 
-; variables in the zero page
-SRC=$00C0
+; variables
+SRC=$C0
 SRC_HI=SRC+1
 DEST=SRC_HI+1
 DEST_HI=DEST+1
 LOOP_TICK=DEST_HI+1
+
+; params for ADD_TO_X_COORDINATE
+X_TEMP=LOOP_TICK+1
+SPRITE_MASK = X_TEMP + 1
+X_INCR_VAL = SPRITE_MASK + 1
+
+; next variable should be two later...
+
 
 ; animation/motion speed constants
 ; The idea here is the main loop operates on a wrap-around tick of 256.
@@ -68,37 +76,10 @@ QUARTER_SPEED         = %00000111
 1_64TH_SPEED          = %01111111
 SLOWEST_SPEED         = %11111111
 
-; advances the seagull to the right (wrapping if necessary),
-; and switches between animation frames
-; /1 : current loop tick
-; /2 : animation speed
-; /3 : movement speed
-defm update_seagull
-        ; switch animation frame
-        lda /1  ; load current tick
-        and #/2 ; and with the speed
-        cmp #/2 ; see if the result matches the speed
-        bne @movement ; skip animation on no match (it's not yet time to fire)
-        
-        ; perform the animation
 
-        ; pick the appropriate animation, based on contents
-        ; of seagull_data_ptr
-        lda seagull_data_ptr
-        cmp #seagull_wings_up
-        beq @choose_wings_down
-@choose_wings_up
-        lda #seagull_wings_up
-        sta seagull_data_ptr
-        jmp @movement
-
-@choose_wings_down
-        lda #seagull_wings_down
-        sta seagull_data_ptr
-        jmp @movement
-
-@movement
-        nop
+; performs a bitwise-NOT on the accumulator contents
+defm invert_acc
+        eor #$FF
         endm
 
 ; /1 : destination address
@@ -113,6 +94,9 @@ defm store_2_byte_value
         lda #>/2
         sta /1,Y
         endm
+
+
+
 
 ; /1 : src address
 defm set_src
@@ -186,7 +170,7 @@ main_game_loop
         ; update the pirate's location and animation
 
         ; update the seagull's location and animation
-        update_seagull LOOP_TICK,SLOWEST_SPEED,SLOWEST_SPEED
+        jsr UPDATE_SEAGULL
 
         ; update the coconut's location and animation
 
@@ -200,6 +184,41 @@ main_game_loop
         beq main_game_loop
 
         rts
+
+; moves a sprite by incrementing its x-coordinate. DOES NOT WRAP!
+
+; inputs:
+; (X_TEMP): contains the X-value we're incrementing
+; (X_INCR_VAL): the amount to increment x. 255 max (8-bit limit)
+; (SPRITE_MASK): bit set for the sprite getting incremented
+;
+; outputs:
+; (X_TEMP): is the new low byte of the caller's x-position
+; $D010: appropriate sprite bit is set/unset as needed
+ADD_TO_X_COORDINATE
+        ldy #0
+        lda (X_TEMP),Y
+        adc (X_INCR_VAL),Y
+        sta (X_TEMP),Y ; note: does not reset carry flag
+        bcc @end ; if c=0, nothing more required
+
+        ; c=1, we have to deal with the high bits
+        lda (SPRITE_MASK),Y
+        and $D010 ; contains the hi bits of sprite x-locations
+        bne @clear_hi_bit
+
+@set_hi_bit
+        lda $D010
+        ora SPRITE_MASK
+        jmp @mod_hi_bit
+
+@clear_hi_bit
+        lda (SPRITE_MASK),Y
+        invert_acc
+        and $D010
+@mod_hi_bit    
+        sta $D010
+@end    rts
 
 INITIALIZE_COCONUT_SPRITE ; sprite 2
         ; set the coconut's 10 color
@@ -340,3 +359,52 @@ SET_SHARED_SCREEN_COLORS
         sta $D023
 
         rts
+
+; advances the seagull to the right (wrapping if necessary),
+; and switches between animation frames
+; /1 : current loop tick
+; /2 : animation speed
+; /3 : movement speed
+UPDATE_SEAGULL
+        ; switch animation frame
+        lda LOOP_TICK
+        and #FASTEST_SPEED ; and with the speed
+        cmp #FASTEST_SPEED ; see if the result matches the speed
+        bne @movement ; skip animation on no match (it's not yet time to fire)
+        
+        ; perform the animation
+
+        ; pick the appropriate animation, based on contents
+        ; of seagull_data_ptr
+        lda seagull_data_ptr
+        cmp #seagull_wings_up
+        beq @choose_wings_down
+@choose_wings_up
+        lda #seagull_wings_up
+        sta seagull_data_ptr
+        jmp @movement
+
+@choose_wings_down
+        lda #seagull_wings_down
+        sta seagull_data_ptr
+        jmp @movement
+
+@movement
+        lda LOOP_TICK
+        and #FASTEST_SPEED
+        cmp #FASTEST_SPEED
+        bne @end
+        
+        ; perform the movement
+        ldy #0
+        lda #%00000010
+        sta (SPRITE_MASK),Y
+        lda seagull_x_ptr
+        sta (X_TEMP),Y
+        lda #10
+        sta (X_INCR_VAL),Y
+        jsr ADD_TO_X_COORDINATE
+        lda (X_TEMP),Y
+        sta seagull_x_ptr
+ 
+@end    rts

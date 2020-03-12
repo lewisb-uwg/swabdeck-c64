@@ -1,0 +1,33 @@
+;labels
+al $0840 .main_game_loop
+al $084E .ADD_TO_X_COORDINATE
+al $085F .@set_hi_bit
+al $0867 .@clear_hi_bit
+al $086E .@mod_hi_bit
+al $0871 .@end
+al $0872 .INITIALIZE_COCONUT_SPRITE
+al $0887 .INITIALIZE_SEAGULL_SPRITE
+al $089C .INITIALIZE_PIRATE_SPRITE
+al $08B1 .REDIRECT_TO_CUSTOM_CHARSET
+al $08B7 .APPLY_PER_CHAR_COLORS
+al $0914 .COPY_SCREEN_DATA_TO_SCREEN_RAM
+al $0971 .MOVE_256_BYTES
+al $0973 .@loop
+al $097B .ENABLE_MULTICOLOR_CHAR_MODE
+al $0984 .SET_SHARED_SCREEN_COLORS
+al $0994 .UPDATE_SEAGULL
+al $09A3 .@choose_wings_up
+al $09AB .@choose_wings_down
+al $09B3 .@movement
+al $09D3 .@end
+al $2E80 ._pirate_standing
+al $2EC0 ._pirate_running
+al $2F00 ._seagull_wings_up
+al $2F40 ._seagull_wings_down
+al $2F80 ._coconut_horz
+al $2FC0 ._coconut_vert
+al $3000 .CHARDATA
+al $9C00 ._screen_data
+al $9800 ._colour_data
+;breakpoints
+
