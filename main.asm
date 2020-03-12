@@ -60,6 +60,9 @@ X_TEMP=LOOP_TICK+1
 SPRITE_MASK = X_TEMP + 1
 X_INCR_VAL = SPRITE_MASK + 1
 
+; bit 0 is 'S' key, bit 1 is 'A' key. Set if just pressed, unset otherwise. 
+INPUT_FLAGS = X_INCR_VAL + 1
+
 ; next variable should be two later...
 
 
@@ -400,16 +403,98 @@ SET_SHARED_SCREEN_COLORS
 
 UPDATE_PIRATE
         jsr DETERMINE_MOVEMENT_DISTANCE
-        ; if distance == 0 then rts
-        jsr ANIMATE_PIRATE
+        lda X_INCR_VAL
+        beq @end ; return if X_INCR_VAL hasn't changed
+        
         jsr MOVE_PIRATE
-        rts
+        jsr ANIMATE_PIRATE
+@end    rts
 
+; Polls keyboard and sets X_INCR_VAL based on key pressed
+; if 'S' pressed -- X_INCR_VAL gets a positive value
+; if 'A' pressed -- X_INCR_VAL gets a negative value
+; X_INCR_VAL will be zero if the distance moves beyond the pirate's bounds
+pirate_x_increment=5
 DETERMINE_MOVEMENT_DISTANCE
-        rts
+        lda #0 ; init X_INCR_VAL to zero
+        sta X_INCR_VAL
+        jsr CHECK_FOR_S_KEY
+        lda INPUT_FLAGS
+        cmp #%00000010
+        lda #pirate_x_increment
+        bne @end
+        
+        ; check to see if we're beyond x-max for pirate
+        ; this means the 9th bit is set and pirate_x_ptr > 41
+        lda $D010
+        and #%00000001
+        beq @standard_increment ; 9th bit not set, we're done
+        
+        ; 9th bit is set, see if pirate_x_ptr+increment > 41
+        lda pirate_x_ptr
+        adc #pirate_x_increment
+        cmp #41
+        bpl @standard_increment ; we're <41 so no need to clip
+        lda #41
+        sbc pirate_x_ptr
+        sta X_INCR_VAL
+        jmp @end
+@standard_increment     
+        lda #pirate_x_increment
+        sta X_INCR_VAL
+@end    rts
+
+; Checks for press of the 'S' key
+; input: none
+; output: INPUT_FLAGS = %00000010 if 'S' pressed, $00 otherwise
+;
+; adapted from http://c64-wiki.com/wiki/Keyboard#Assembler
+PRA  = $DC00 ; CIA#1, port register A
+DDRA = $DC02 ; CIA#1, data direction register A
+PRB  = $DC01 ; CIA#1, port register B
+DDRB = $DC03 ; CIA#1, data direction register B
+CHECK_FOR_S_KEY
+        lda #0
+        sta INPUT_FLAGS
+
+        sei ; deactivate interrupts
+        lda #%11111111 ; make port A the outputs
+        sta DDRA
+        
+        lda #%00000000 ; make port B the inputs
+        sta DDRB
+
+        lda #%11111101 ; testing col1 of the kb matrix
+        sta PRA
+
+        lda PRB
+        and #%00100000 ; masking row 5
+        bne @end
+        lda #%00000010 ; set the bit indicating 'S' was pressed
+        sta INPUT_FLAGS
+
+        cli ; reactive interrupts
+@end    rts
 
 MOVE_PIRATE
-        rts
+        lda LOOP_TICK
+        and #FASTEST_SPEED
+        cmp #FASTEST_SPEED
+        bne @end
+                
+        ; perform the movement
+        ldy #0
+        lda #%00000001
+        sta SPRITE_MASK
+        lda pirate_x_ptr
+        sta X_TEMP
+        lda #1
+        sta X_INCR_VAL
+        jsr ADD_TO_X_COORDINATE
+        lda X_TEMP
+        sta pirate_x_ptr
+
+@end    rts
 
 ANIMATE_PIRATE
         rts
