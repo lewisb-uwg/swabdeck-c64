@@ -67,13 +67,14 @@ X_INCR_VAL = SPRITE_MASK + 1
 ; The idea here is the main loop operates on a wrap-around tick of 256.
 ; the 1's patterns here determine the speed, e.g., FASTEST_SPEED happens
 ; every-other tick, HALF_SPEED every fourth tick, etc.
-FASTEST_SPEED         = %00000001
-HALF_SPEED            = %00000011
-QUARTER_SPEED         = %00000111
-1_8TH_SPEED           = %00001111
-1_16TH_SPEED          = %00011111
-1_32ND_SPEED          = %00111111
-1_64TH_SPEED          = %01111111
+FASTEST_SPEED         = %00000000
+HALF_SPEED            = %00000001
+QUARTER_SPEED         = %00000011
+1_8TH_SPEED           = %00000111
+1_16TH_SPEED          = %00001111
+1_32ND_SPEED          = %00011111
+1_64TH_SPEED          = %00111111
+1_128TH_SPEED         = %01111111
 SLOWEST_SPEED         = %11111111
 
 
@@ -150,7 +151,7 @@ defm set_common_multicolor_sprite_colors
 
 ; program entrance
 *=$0810
-
+PROGRAM_START
         ; setup phase
         jsr COPY_SCREEN_DATA_TO_SCREEN_RAM
         jsr ENABLE_MULTICOLOR_CHAR_MODE
@@ -163,9 +164,39 @@ defm set_common_multicolor_sprite_colors
         set_common_multicolor_sprite_colors
         enable_sprites
 
-        ; main game loop
+        ; init the loop tick
         lda #$00
         sta LOOP_TICK ; init loop tick to zero
+
+init_raster_interrupt
+        ; this from http://c64-wiki.com/wiki/Raster_interrupt
+
+        ; switch off interrupts from CIA-1
+        lda #%01111111
+        sta $DC0D
+
+        ;clear most significant bit in VIC's raster register
+        and $D011
+        sta $D011
+
+        ; set the raster line number where interrupt should occur
+        lda #0 ; beginning of screen refresh?
+        sta $D012
+
+        ; set the interrupt vector to point to the service routine
+        lda #<main_game_loop
+        sta $0314
+        lda #>main_game_loop
+        sta $0315
+
+        ; enable raster interrupt signals from VIC
+        lda #%00000001
+        sta $D01A
+
+        ; return to BASIC
+        rts 
+        
+
 main_game_loop
         ; update the pirate's location and animation
 
@@ -180,10 +211,15 @@ main_game_loop
         sta LOOP_TICK
 
         ; for now, infinite game loop
-        lda #0
-        beq main_game_loop
+        ;lda #0
+        ;beq main_game_loop
 
-        rts
+        ;rts
+        ; acknowledge the interrupt by clearing the VIC's interrupt flag
+        asl $D019
+        
+        ; jump into the KERNAL's normal interrupt service routine
+        jmp $EA31
 
 ; moves a sprite by incrementing its x-coordinate. DOES NOT WRAP!
 
@@ -365,8 +401,8 @@ SET_SHARED_SCREEN_COLORS
 UPDATE_SEAGULL
         ; switch animation frame
         lda LOOP_TICK
-        and #SLOWEST_SPEED ; and with the speed
-        cmp #SLOWEST_SPEED ; see if the result matches the speed
+        and #FASTEST_SPEED ; and with the speed
+        cmp #FASTEST_SPEED ; see if the result matches the speed
         bne @movement ; skip animation on no match (it's not yet time to fire)
         
         ; perform the animation
@@ -388,8 +424,8 @@ UPDATE_SEAGULL
 
 @movement
         lda LOOP_TICK
-        and #SLOWEST_SPEED
-        cmp #SLOWEST_SPEED
+        and #FASTEST_SPEED
+        cmp #FASTEST_SPEED
         bne @end
         
         ; perform the movement
