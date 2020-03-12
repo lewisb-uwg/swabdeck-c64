@@ -215,13 +215,13 @@
 00215  084E             ; $D010: APPROPRIATE SPRITE BIT IS SET/UNSET AS NEEDED
 00216  084E             ADD_TO_X_COORDINATE 
 00217  084E  A0 00                 LDY #0
-00218  0850  B1 C5                 LDA (X_TEMP),Y
-00219  0852  71 C7                 ADC (X_INCR_VAL),Y
-00220  0854  91 C5                 STA (X_TEMP),Y ; NOTE: DOES NOT RESET CARRY FLAG
+00218  0850  A5 C5                 LDA X_TEMP
+00219  0852  65 C7                 ADC X_INCR_VAL
+00220  0854  85 C5                 STA X_TEMP ; NOTE: DOES NOT RESET CARRY FLAG
 00221  0856  90 19                 BCC @END ; IF C=0, NOTHING MORE REQUIRED
 00222  0858             
 00223  0858                        ; C=1, WE HAVE TO DEAL WITH THE HIGH BITS
-00224  0858  B1 C6                 LDA (SPRITE_MASK),Y
+00224  0858  A5 C6                 LDA SPRITE_MASK
 00225  085A  2D 10 D0              AND $D010 ; CONTAINS THE HI BITS OF SPRITE X-LOCATIONS
 00226  085D  D0 08                 BNE @CLEAR_HI_BIT
 00227  085F             
@@ -231,7 +231,7 @@
 00231  0864  4C 6E 08              JMP @MOD_HI_BIT
 00232  0867             
 00233  0867             @CLEAR_HI_BIT 
-00234  0867  B1 C6                 LDA (SPRITE_MASK),Y
+00234  0867  A5 C6                 LDA SPRITE_MASK
 00235  0869             
 00236  0869             
 00237  0869  49 FF                 EOR #$FF
@@ -511,13 +511,13 @@
 00511  09BB                        ; PERFORM THE MOVEMENT
 00512  09BB  A0 00                 LDY #0
 00513  09BD  A9 02                 LDA #%00000010
-00514  09BF  91 C6                 STA (SPRITE_MASK),Y
+00514  09BF  85 C6                 STA SPRITE_MASK
 00515  09C1  AD 02 D0              LDA SEAGULL_X_PTR
-00516  09C4  91 C5                 STA (X_TEMP),Y
+00516  09C4  85 C5                 STA X_TEMP
 00517  09C6  A9 01                 LDA #1
-00518  09C8  91 C7                 STA (X_INCR_VAL),Y
+00518  09C8  85 C7                 STA X_INCR_VAL
 00519  09CA  20 4E 08              JSR ADD_TO_X_COORDINATE
-00520  09CD  B1 C5                 LDA (X_TEMP),Y
+00520  09CD  A5 C5                 LDA X_TEMP
 00521  09CF  8D 02 D0              STA SEAGULL_X_PTR
 00522  09D2                        
 00523  09D2  60         @END       RTS
@@ -853,7 +853,7 @@ VIOLET  = $0004
 WHITE  = $0001
 X_INCR_VAL  = $00C7
 X_TEMP  = $00C5
-******* 13 Unused variables(s) *******
+******* 11 Unused variables(s) *******
 1_16TH_SPEED
 1_32ND_SPEED
 1_64TH_SPEED
@@ -874,6 +874,4 @@ sprite_data
 SRC
 SRC_HI
 tgt_c64
-X_INCR_VAL
-X_TEMP
 

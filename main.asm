@@ -197,13 +197,13 @@ main_game_loop
 ; $D010: appropriate sprite bit is set/unset as needed
 ADD_TO_X_COORDINATE
         ldy #0
-        lda (X_TEMP),Y
-        adc (X_INCR_VAL),Y
-        sta (X_TEMP),Y ; note: does not reset carry flag
+        lda X_TEMP
+        adc X_INCR_VAL
+        sta X_TEMP ; note: does not reset carry flag
         bcc @end ; if c=0, nothing more required
 
         ; c=1, we have to deal with the high bits
-        lda (SPRITE_MASK),Y
+        lda SPRITE_MASK
         and $D010 ; contains the hi bits of sprite x-locations
         bne @clear_hi_bit
 
@@ -213,7 +213,7 @@ ADD_TO_X_COORDINATE
         jmp @mod_hi_bit
 
 @clear_hi_bit
-        lda (SPRITE_MASK),Y
+        lda SPRITE_MASK
         invert_acc
         and $D010
 @mod_hi_bit    
@@ -395,13 +395,13 @@ UPDATE_SEAGULL
         ; perform the movement
         ldy #0
         lda #%00000010
-        sta (SPRITE_MASK),Y
+        sta SPRITE_MASK
         lda seagull_x_ptr
-        sta (X_TEMP),Y
+        sta X_TEMP
         lda #1
-        sta (X_INCR_VAL),Y
+        sta X_INCR_VAL
         jsr ADD_TO_X_COORDINATE
-        lda (X_TEMP),Y
+        lda X_TEMP
         sta seagull_x_ptr
  
 @end    rts
