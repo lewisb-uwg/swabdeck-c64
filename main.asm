@@ -368,8 +368,8 @@ SET_SHARED_SCREEN_COLORS
 UPDATE_SEAGULL
         ; switch animation frame
         lda LOOP_TICK
-        and #FASTEST_SPEED ; and with the speed
-        cmp #FASTEST_SPEED ; see if the result matches the speed
+        and #SLOWEST_SPEED ; and with the speed
+        cmp #SLOWEST_SPEED ; see if the result matches the speed
         bne @movement ; skip animation on no match (it's not yet time to fire)
         
         ; perform the animation
@@ -391,8 +391,8 @@ UPDATE_SEAGULL
 
 @movement
         lda LOOP_TICK
-        and #FASTEST_SPEED
-        cmp #FASTEST_SPEED
+        and #SLOWEST_SPEED
+        cmp #SLOWEST_SPEED
         bne @end
         
         ; perform the movement
