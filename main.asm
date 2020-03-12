@@ -399,11 +399,16 @@ SET_SHARED_SCREEN_COLORS
 ; advances the seagull to the right (wrapping if necessary),
 ; and switches between animation frames
 UPDATE_SEAGULL
+        jsr ANIMATE_SEAGULL
+        jsr MOVE_SEAGULL
+        rts
+
+ANIMATE_SEAGULL
         ; switch animation frame
         lda LOOP_TICK
         and #FASTEST_SPEED ; and with the speed
         cmp #FASTEST_SPEED ; see if the result matches the speed
-        bne @movement ; skip animation on no match (it's not yet time to fire)
+        bne @end ; skip animation on no match (it's not yet time to fire)
         
         ; perform the animation
 
@@ -415,19 +420,19 @@ UPDATE_SEAGULL
 @choose_wings_up
         lda #seagull_wings_up
         sta seagull_data_ptr
-        jmp @movement
+        jmp @end
 
 @choose_wings_down
         lda #seagull_wings_down
         sta seagull_data_ptr
-        jmp @movement
+@end    rts
 
-@movement
+MOVE_SEAGULL
         lda LOOP_TICK
         and #FASTEST_SPEED
         cmp #FASTEST_SPEED
         bne @end
-        
+                
         ; perform the movement
         ldy #0
         lda #%00000010
@@ -443,6 +448,4 @@ UPDATE_SEAGULL
         ; not gonna check for x-axis wrapping; right now will wrap
         ; at x=512, giving a little bit of respite for player before
         ; the next pass. Also I'm lazy.
-        
- 
 @end    rts
