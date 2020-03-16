@@ -497,7 +497,7 @@ MOVE_PIRATE
         
         jsr ADD_TO_X_COORDINATE
 
-        ;jsr CLIP_TO_PIRATE_X_MAX
+        jsr CLIP_TO_PIRATE_X_MAX
         ;jsr CLIP_TO_PIRATE_X_MIN
 
         lda X_TEMP
