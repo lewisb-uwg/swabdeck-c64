@@ -430,30 +430,44 @@ UPDATE_PIRATE
 ; does NOT perform any min/max clipping
 pirate_speed = 1
 DETERMINE_MOVEMENT_DISTANCE
-        jsr CHECK_FOR_S_KEY
+        jsr CHECK_FOR_DIRECTIONAL_KEYS
         lda INPUT_FLAGS
         and #%00000010
-        beq @end
+        beq @check_for_a
         
         ; S was pressed
         lda #pirate_speed
         sta X_INCR_VAL
         rts
-        
+
+@check_for_a
+        lda INPUT_FLAGS
+        and #%00000001
+        beq @end
+
+        ; A was pressed
+        lda #0
+        clc
+        sbc #pirate_speed
+        sta X_INCR_VAL
+        rts
+
 @end    lda #0
         sta X_INCR_VAL
         rts
 
 ; Checks for press of the 'S' key
 ; input: none
-; output: INPUT_FLAGS = %00000010 if 'S' pressed, $00 otherwise
+; output: INPUT_FLAGS = %00000010 if 'S' pressed, 
+;               %00000001 if 'A' was pressed, $00 otherwise
 ;
 ; adapted from http://c64-wiki.com/wiki/Keyboard#Assembler
 PRA  = $DC00 ; CIA#1, port register A
 DDRA = $DC02 ; CIA#1, data direction register A
 PRB  = $DC01 ; CIA#1, port register B
 DDRB = $DC03 ; CIA#1, data direction register B
-CHECK_FOR_S_KEY
+CHECK_FOR_DIRECTIONAL_KEYS
+        ; start by checking for 'S'
         lda #0
         sta INPUT_FLAGS
 
@@ -469,8 +483,18 @@ CHECK_FOR_S_KEY
 
         lda PRB
         and #%00100000 ; masking row 5
-        bne @end
+        bne @check_for_A
         lda #%00000010 ; set the bit indicating 'S' was pressed
+        sta INPUT_FLAGS
+
+@check_for_A
+        lda #%11111101 ; test col1 of the kb matrix
+        sta PRA
+
+        lda PRB
+        and #%00000100 ; masking row 2
+        bne @end
+        lda #%00000001 ; set the bit indicating 'A' was pressed
         sta INPUT_FLAGS
 
 @end    ;cli ; reactivate interrupts
