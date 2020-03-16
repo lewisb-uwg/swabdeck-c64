@@ -211,6 +211,7 @@ main_game_loop
         ; update the coconut's location and animation
 
         ; increment the loop tick (note it rolls over automatically)
+        clc
         lda LOOP_TICK
         adc #1
         sta LOOP_TICK
@@ -268,6 +269,7 @@ ADD_TO_X_COORDINATE
         ; simply set the hi bit and we're done
         lda SPRITE_X_HI_TEMP
         ora SPRITE_MASK
+        sta SPRITE_X_HI_TEMP
         rts
 
 INITIALIZE_COCONUT_SPRITE ; sprite 2
@@ -426,7 +428,7 @@ UPDATE_PIRATE
 ; if 'S' pressed -- X_INCR_VAL gets a positive value
 ; if 'A' pressed -- X_INCR_VAL gets a negative value
 ; does NOT perform any min/max clipping
-pirate_speed = 5
+pirate_speed = 1
 DETERMINE_MOVEMENT_DISTANCE
         jsr CHECK_FOR_S_KEY
         lda INPUT_FLAGS
@@ -495,8 +497,8 @@ MOVE_PIRATE
         
         jsr ADD_TO_X_COORDINATE
 
-        jsr CLIP_TO_PIRATE_X_MAX
-        jsr CLIP_TO_PIRATE_X_MIN
+        ;jsr CLIP_TO_PIRATE_X_MAX
+        ;jsr CLIP_TO_PIRATE_X_MIN
 
         lda X_TEMP
         sta $D000 ; sprite 0 x low byte
