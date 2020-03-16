@@ -59,9 +59,10 @@ LOOP_TICK=DEST_HI+1
 X_TEMP=LOOP_TICK+1
 SPRITE_MASK = X_TEMP + 1
 X_INCR_VAL = SPRITE_MASK + 1
+SPRITE_X_HI_TEMP = X_INCR_VAL + 1
 
 ; bit 0 is 'S' key, bit 1 is 'A' key. Set if just pressed, unset otherwise. 
-INPUT_FLAGS = X_INCR_VAL + 1
+INPUT_FLAGS = SPRITE_X_HI_TEMP + 1
 
 ; next variable should be two later...
 
@@ -202,7 +203,7 @@ init_raster_interrupt
 
 main_game_loop
         ; update the pirate's location and animation
-        jsr UPDATE_PIRATE
+        ;jsr UPDATE_PIRATE
 
         ; update the seagull's location and animation
         jsr UPDATE_SEAGULL
@@ -228,13 +229,16 @@ main_game_loop
 ; moves a sprite by incrementing its x-coordinate. DOES NOT WRAP!
 
 ; inputs:
-; (X_TEMP): contains the X-value we're incrementing
-; (X_INCR_VAL): the amount to increment x. 255 max (8-bit limit)
-; (SPRITE_MASK): bit set for the sprite getting incremented
-;
+; X_TEMP: contains the X-value we're incrementing
+; X_INCR_VAL: the amount to increment x. 255 max (8-bit limit)
+; SPRITE_MASK: bit set for the sprite getting incremented
+; SPRITE_X_HI_TEMP: byte to hold the high bit ($D010-style) of the
+;                   sprite's x-coordinat. Set with the corresponding bit of $D010
 ; outputs:
-; (X_TEMP): is the new low byte of the caller's x-position
-; $D010: appropriate sprite bit is set/unset as needed
+; X_TEMP: is the new low byte of the caller's x-position
+; SPRITE_X_HI_TEMP: appropriate sprite hi bit is set/unset as needed. It
+;                   guarantees to preserve other sprites' hi bits, so it can
+;                   be copied directly back to $D010 if needed.                   
 ADD_TO_X_COORDINATE
         ldy #0
         lda X_TEMP
@@ -244,20 +248,20 @@ ADD_TO_X_COORDINATE
 
         ; c=1, we have to deal with the high bits
         lda SPRITE_MASK
-        and $D010 ; contains the hi bits of sprite x-locations
+        and SPRITE_X_HI_TEMP ; contains the hi bits of sprite x-locations
         bne @clear_hi_bit
 
 @set_hi_bit
-        lda $D010
+        lda SPRITE_X_HI_TEMP
         ora SPRITE_MASK
         jmp @mod_hi_bit
 
 @clear_hi_bit
         lda SPRITE_MASK
         invert_acc
-        and $D010
+        and SPRITE_X_HI_TEMP
 @mod_hi_bit    
-        sta $D010
+        sta SPRITE_X_HI_TEMP
 @end    rts
 
 INITIALIZE_COCONUT_SPRITE ; sprite 2
@@ -537,16 +541,25 @@ MOVE_SEAGULL
         bne @end
                 
         ; perform the movement
-        ldy #0
-        lda #%00000010
+        lda #%00000010 ; set the sprite mask
         sta SPRITE_MASK
-        lda seagull_x_ptr
+
+        lda seagull_x_ptr ; set the seagull x low byte
         sta X_TEMP
-        lda #1
+
+        lda #1 ; set the increment value
         sta X_INCR_VAL
+
+        lda $D010 ; copy $D010 into SPRITE_X_HI_TEMP
+        sta SPRITE_X_HI_TEMP
+
         jsr ADD_TO_X_COORDINATE
-        lda X_TEMP
+
+        lda X_TEMP ; copy X_TEMP back into seagull_x_ptr
         sta seagull_x_ptr
+
+        lda SPRITE_X_HI_TEMP
+        sta $D010
 
         ; not gonna check for x-axis wrapping; right now will wrap
         ; at x=512, giving a little bit of respite for player before

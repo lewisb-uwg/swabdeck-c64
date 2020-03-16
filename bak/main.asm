@@ -54,9 +54,15 @@ SRC_HI=SRC+1
 DEST=SRC_HI+1
 DEST_HI=DEST+1
 LOOP_TICK=DEST_HI+1
-X_COORD_PTR=LOOP_TICK+1
-X_INCREMENT_VALUE_PTR=X_COORD_PTR+2
-SPRITE_MASK_BIT_PTR=X_INCREMENT_VALUE_PTR+1
+
+; params for ADD_TO_X_COORDINATE
+X_TEMP=LOOP_TICK+1
+SPRITE_MASK = X_TEMP + 1
+X_INCR_VAL = SPRITE_MASK + 1
+
+; bit 0 is 'S' key, bit 1 is 'A' key. Set if just pressed, unset otherwise. 
+INPUT_FLAGS = X_INCR_VAL + 1
+
 ; next variable should be two later...
 
 
@@ -64,13 +70,14 @@ SPRITE_MASK_BIT_PTR=X_INCREMENT_VALUE_PTR+1
 ; The idea here is the main loop operates on a wrap-around tick of 256.
 ; the 1's patterns here determine the speed, e.g., FASTEST_SPEED happens
 ; every-other tick, HALF_SPEED every fourth tick, etc.
-FASTEST_SPEED         = %00000001
-HALF_SPEED            = %00000011
-QUARTER_SPEED         = %00000111
-1_8TH_SPEED           = %00001111
-1_16TH_SPEED          = %00011111
-1_32ND_SPEED          = %00111111
-1_64TH_SPEED          = %01111111
+FASTEST_SPEED         = %00000000
+HALF_SPEED            = %00000001
+QUARTER_SPEED         = %00000011
+1_8TH_SPEED           = %00000111
+1_16TH_SPEED          = %00001111
+1_32ND_SPEED          = %00011111
+1_64TH_SPEED          = %00111111
+1_128TH_SPEED         = %01111111
 SLOWEST_SPEED         = %11111111
 
 
@@ -147,7 +154,7 @@ defm set_common_multicolor_sprite_colors
 
 ; program entrance
 *=$0810
-
+PROGRAM_START
         ; setup phase
         jsr COPY_SCREEN_DATA_TO_SCREEN_RAM
         jsr ENABLE_MULTICOLOR_CHAR_MODE
@@ -160,11 +167,42 @@ defm set_common_multicolor_sprite_colors
         set_common_multicolor_sprite_colors
         enable_sprites
 
-        ; main game loop
+        ; init the loop tick
         lda #$00
         sta LOOP_TICK ; init loop tick to zero
+
+init_raster_interrupt
+        ; this from http://c64-wiki.com/wiki/Raster_interrupt
+
+        ; switch off interrupts from CIA-1
+        lda #%01111111
+        sta $DC0D
+
+        ;clear most significant bit in VIC's raster register
+        and $D011
+        sta $D011
+
+        ; set the raster line number where interrupt should occur
+        lda #0 ; beginning of screen refresh?
+        sta $D012
+
+        ; set the interrupt vector to point to the service routine
+        lda #<main_game_loop
+        sta $0314
+        lda #>main_game_loop
+        sta $0315
+
+        ; enable raster interrupt signals from VIC
+        lda #%00000001
+        sta $D01A
+
+        ; return to BASIC
+        rts 
+        
+
 main_game_loop
         ; update the pirate's location and animation
+        jsr UPDATE_PIRATE
 
         ; update the seagull's location and animation
         jsr UPDATE_SEAGULL
@@ -177,35 +215,45 @@ main_game_loop
         sta LOOP_TICK
 
         ; for now, infinite game loop
-        lda #0
-        beq main_game_loop
+        ;lda #0
+        ;beq main_game_loop
 
-        rts
+        ;rts
+        ; acknowledge the interrupt by clearing the VIC's interrupt flag
+        asl $D019
+        
+        ; jump into the KERNAL's normal interrupt service routine
+        jmp $EA31
 
-; moves a sprite by incrementing its x-coordinate
+; moves a sprite by incrementing its x-coordinate. DOES NOT WRAP!
+
 ; inputs:
-; X_COORD_PTR : memory location of the x-coordinate to increment
-; X_INCREMENT_VALUE_PTR : memory location holding the increment value
-; SPRITE_MASK_BIT_PTR : memory location with a mask bit for the sprite this affects
+; (X_TEMP): contains the X-value we're incrementing
+; (X_INCR_VAL): the amount to increment x. 255 max (8-bit limit)
+; (SPRITE_MASK): bit set for the sprite getting incremented
+;
+; outputs:
+; (X_TEMP): is the new low byte of the caller's x-position
+; $D010: appropriate sprite bit is set/unset as needed
 ADD_TO_X_COORDINATE
         ldy #0
-        lda (X_COORD_PTR),Y
-        adc (X_INCREMENT_VALUE_PTR),Y
-        sta X_COORD_PTR ; note: does not reset carry flag
+        lda X_TEMP
+        adc X_INCR_VAL
+        sta X_TEMP ; note: does not reset carry flag
         bcc @end ; if c=0, nothing more required
 
-        ; c=1, we have to deal with the high bit 
-        lda (SPRITE_MASK_BIT_PTR),Y
+        ; c=1, we have to deal with the high bits
+        lda SPRITE_MASK
         and $D010 ; contains the hi bits of sprite x-locations
-        beq @clear_hi_bit
+        bne @clear_hi_bit
 
 @set_hi_bit
         lda $D010
-        ora SPRITE_MASK_BIT_PTR
+        ora SPRITE_MASK
         jmp @mod_hi_bit
 
 @clear_hi_bit
-        lda (SPRITE_MASK_BIT_PTR),Y
+        lda SPRITE_MASK
         invert_acc
         and $D010
 @mod_hi_bit    
@@ -352,17 +400,117 @@ SET_SHARED_SCREEN_COLORS
 
         rts
 
-; advances the seagull to the right (wrapping if necessary),
-; and switches between animation frames
-; /1 : current loop tick
-; /2 : animation speed
-; /3 : movement speed
+
+UPDATE_PIRATE
+        jsr DETERMINE_MOVEMENT_DISTANCE
+        lda X_INCR_VAL
+        beq @end ; return if X_INCR_VAL hasn't changed
+        
+        jsr MOVE_PIRATE
+        jsr ANIMATE_PIRATE
+@end    rts
+
+; Polls keyboard and sets X_INCR_VAL based on key pressed
+; if 'S' pressed -- X_INCR_VAL gets a positive value
+; if 'A' pressed -- X_INCR_VAL gets a negative value
+; X_INCR_VAL will be zero if the distance moves beyond the pirate's bounds
+pirate_x_increment=5
+DETERMINE_MOVEMENT_DISTANCE
+        lda #0 ; init X_INCR_VAL to zero
+        sta X_INCR_VAL
+        jsr CHECK_FOR_S_KEY
+        lda INPUT_FLAGS
+        cmp #%00000010
+        lda #pirate_x_increment
+        bne @end
+        
+        ; check to see if we're beyond x-max for pirate
+        ; this means the 9th bit is set and pirate_x_ptr > 41
+        lda $D010
+        and #%00000001
+        beq @standard_increment ; 9th bit not set, we're done
+        
+        ; 9th bit is set, see if pirate_x_ptr+increment > 41
+        lda pirate_x_ptr
+        adc #pirate_x_increment
+        cmp #41
+        bpl @standard_increment ; we're <41 so no need to clip
+        lda #41
+        sbc pirate_x_ptr
+        sta X_INCR_VAL
+        jmp @end
+@standard_increment     
+        lda #pirate_x_increment
+        sta X_INCR_VAL
+@end    rts
+
+; Checks for press of the 'S' key
+; input: none
+; output: INPUT_FLAGS = %00000010 if 'S' pressed, $00 otherwise
+;
+; adapted from http://c64-wiki.com/wiki/Keyboard#Assembler
+PRA  = $DC00 ; CIA#1, port register A
+DDRA = $DC02 ; CIA#1, data direction register A
+PRB  = $DC01 ; CIA#1, port register B
+DDRB = $DC03 ; CIA#1, data direction register B
+CHECK_FOR_S_KEY
+        lda #0
+        sta INPUT_FLAGS
+
+        sei ; deactivate interrupts
+        lda #%11111111 ; make port A the outputs
+        sta DDRA
+        
+        lda #%00000000 ; make port B the inputs
+        sta DDRB
+
+        lda #%11111101 ; testing col1 of the kb matrix
+        sta PRA
+
+        lda PRB
+        and #%00100000 ; masking row 5
+        bne @end
+        lda #%00000010 ; set the bit indicating 'S' was pressed
+        sta INPUT_FLAGS
+
+        cli ; reactive interrupts
+@end    rts
+
+MOVE_PIRATE
+        lda LOOP_TICK
+        and #FASTEST_SPEED
+        cmp #FASTEST_SPEED
+        bne @end
+                
+        ; perform the movement
+        ldy #0
+        lda #%00000001
+        sta SPRITE_MASK
+        lda pirate_x_ptr
+        sta X_TEMP
+        lda #1
+        sta X_INCR_VAL
+        jsr ADD_TO_X_COORDINATE
+        lda X_TEMP
+        sta pirate_x_ptr
+
+@end    rts
+
+ANIMATE_PIRATE
+        rts
+
 UPDATE_SEAGULL
+        jsr ANIMATE_SEAGULL
+        jsr MOVE_SEAGULL
+        rts
+
+; switches between seagull animation frames
+ANIMATE_SEAGULL
         ; switch animation frame
         lda LOOP_TICK
         and #FASTEST_SPEED ; and with the speed
         cmp #FASTEST_SPEED ; see if the result matches the speed
-        bne @movement ; skip animation on no match (it's not yet time to fire)
+        bne @end ; skip animation on no match (it's not yet time to fire)
         
         ; perform the animation
 
@@ -374,26 +522,33 @@ UPDATE_SEAGULL
 @choose_wings_up
         lda #seagull_wings_up
         sta seagull_data_ptr
-        jmp @movement
+        jmp @end
 
 @choose_wings_down
         lda #seagull_wings_down
         sta seagull_data_ptr
-        jmp @movement
+@end    rts
 
-@movement
+; advances the seagull to the right, wrapping around to zero appropriately
+MOVE_SEAGULL
         lda LOOP_TICK
         and #FASTEST_SPEED
         cmp #FASTEST_SPEED
         bne @end
-        
+                
         ; perform the movement
-        store_2_byte_value X_COORD_PTR,seagull_x_ptr
-        lda #10 ; how far the seagull moves
         ldy #0
-        sta (X_INCREMENT_VALUE_PTR),Y
-        lda #%00000010 ; mask for sprite 1
-        sta (SPRITE_MASK_BIT_PTR),Y
+        lda #%00000010
+        sta SPRITE_MASK
+        lda seagull_x_ptr
+        sta X_TEMP
+        lda #1
+        sta X_INCR_VAL
         jsr ADD_TO_X_COORDINATE
- 
+        lda X_TEMP
+        sta seagull_x_ptr
+
+        ; not gonna check for x-axis wrapping; right now will wrap
+        ; at x=512, giving a little bit of respite for player before
+        ; the next pass. Also I'm lazy.
 @end    rts
