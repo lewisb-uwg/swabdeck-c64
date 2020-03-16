@@ -157,764 +157,790 @@
 00157  0810             *=$0810
 00158  0810             PROGRAM_START 
 00159  0810                        ; SETUP PHASE
-00160  0810  20 31 09              JSR COPY_SCREEN_DATA_TO_SCREEN_RAM
-00161  0813  20 98 09              JSR ENABLE_MULTICOLOR_CHAR_MODE
-00162  0816  20 A1 09              JSR SET_SHARED_SCREEN_COLORS
-00163  0819  20 CE 08              JSR REDIRECT_TO_CUSTOM_CHARSET
-00164  081C  20 D4 08              JSR APPLY_PER_CHAR_COLORS
-00165  081F  20 B9 08              JSR INITIALIZE_PIRATE_SPRITE
-00166  0822  20 A4 08              JSR INITIALIZE_SEAGULL_SPRITE
-00167  0825  20 8F 08              JSR INITIALIZE_COCONUT_SPRITE
-00168  0828             
-00169  0828             
-00170  0828  A9 03                 LDA #CYAN
-00171  082A  8D 25 D0              STA $D025
-00172  082D             
-00173  082D  A9 06                 LDA #BLUE
-00174  082F  8D 26 D0              STA $D026
-00175  0832             
-00176  0832             
-00177  0832             
-00178  0832             
-00179  0832             
-00180  0832  A9 07                 LDA #$07
-00181  0834  8D 1C D0              STA $D01C
-00182  0837             
-00183  0837  A9 07                 LDA #$07
-00184  0839  8D 15 D0              STA $D015
-00185  083C             
-00186  083C             
-00187  083C             
-00188  083C             
-00189  083C                        ; INIT THE LOOP TICK
-00190  083C  A9 00                 LDA #$00
-00191  083E  85 C4                 STA LOOP_TICK ; INIT LOOP TICK TO ZERO
-00192  0840             
-00193  0840             INIT_RASTER_INTERRUPT 
-00194  0840                        ; THIS FROM HTTP://C64-WIKI.COM/WIKI/RASTER_INTERRUPT
-00195  0840             
-00196  0840                        ; SWITCH OFF INTERRUPTS FROM CIA-1
-00197  0840  A9 7F                 LDA #%01111111
-00198  0842  8D 0D DC              STA $DC0D
-00199  0845             
-00200  0845                        ;CLEAR MOST SIGNIFICANT BIT IN VIC'S RASTER REGISTER
-00201  0845  2D 11 D0              AND $D011
-00202  0848  8D 11 D0              STA $D011
-00203  084B             
-00204  084B                        ; SET THE RASTER LINE NUMBER WHERE INTERRUPT SHOULD OCCUR
-00205  084B  A9 00                 LDA #0 ; BEGINNING OF SCREEN REFRESH?
-00206  084D  8D 12 D0              STA $D012
-00207  0850             
-00208  0850                        ; SET THE INTERRUPT VECTOR TO POINT TO THE SERVICE ROUTINE
-00209  0850  A9 60                 LDA #<MAIN_GAME_LOOP
-00210  0852  8D 14 03              STA $0314
-00211  0855  A9 08                 LDA #>MAIN_GAME_LOOP
-00212  0857  8D 15 03              STA $0315
-00213  085A             
-00214  085A                        ; ENABLE RASTER INTERRUPT SIGNALS FROM VIC
-00215  085A  A9 01                 LDA #%00000001
-00216  085C  8D 1A D0              STA $D01A
-00217  085F             
-00218  085F                        ; RETURN TO BASIC
-00219  085F  60                    RTS
-00220  0860                        
-00221  0860             
-00222  0860             MAIN_GAME_LOOP 
-00223  0860                        ; UPDATE THE PIRATE'S LOCATION AND ANIMATION
-00224  0860                        ;JSR UPDATE_PIRATE
-00225  0860             
-00226  0860                        ; UPDATE THE SEAGULL'S LOCATION AND ANIMATION
-00227  0860  20 2F 0A              JSR UPDATE_SEAGULL
-00228  0863             
-00229  0863                        ; UPDATE THE COCONUT'S LOCATION AND ANIMATION
-00230  0863             
-00231  0863                        ; INCREMENT THE LOOP TICK (NOTE IT ROLLS OVER AUTOMATICALLY)
-00232  0863  A5 C4                 LDA LOOP_TICK
-00233  0865  69 01                 ADC #1
-00234  0867  85 C4                 STA LOOP_TICK
-00235  0869             
-00236  0869                        ; FOR NOW, INFINITE GAME LOOP
-00237  0869                        ;LDA #0
-00238  0869                        ;BEQ MAIN_GAME_LOOP
-00239  0869             
-00240  0869                        ;RTS
-00241  0869                        ; ACKNOWLEDGE THE INTERRUPT BY CLEARING THE VIC'S INTERRUPT FLAG
-00242  0869  0E 19 D0              ASL $D019
-00243  086C                        
-00244  086C                        ; JUMP INTO THE KERNAL'S NORMAL INTERRUPT SERVICE ROUTINE
-00245  086C  4C 31 EA              JMP $EA31
-00246  086F             
-00247  086F             ; MOVES A SPRITE BY INCREMENTING ITS X-COORDINATE. DOES NOT WRAP!
-00248  086F             
-00249  086F             ; INPUTS:
-00250  086F             ; X_TEMP: CONTAINS THE X-VALUE WE'RE INCREMENTING
-00251  086F             ; X_INCR_VAL: THE AMOUNT TO INCREMENT X. 255 MAX (8-BIT LIMIT)
-00252  086F             ; SPRITE_MASK: BIT SET FOR THE SPRITE GETTING INCREMENTED
-00253  086F             ; SPRITE_X_HI_TEMP: BYTE TO HOLD THE HIGH BIT ($D010-STYLE) OF THE
-00254  086F             ;                   SPRITE'S X-COORDINAT. SET WITH THE CORRESPONDING BIT OF $D010
-00255  086F             ; OUTPUTS:
-00256  086F             ; X_TEMP: IS THE NEW LOW BYTE OF THE CALLER'S X-POSITION
-00257  086F             ; SPRITE_X_HI_TEMP: APPROPRIATE SPRITE HI BIT IS SET/UNSET AS NEEDED. IT
-00258  086F             ;                   GUARANTEES TO PRESERVE OTHER SPRITES' HI BITS, SO IT CAN
-00259  086F             ;                   BE COPIED DIRECTLY BACK TO $D010 IF NEEDED.
-00260  086F             ADD_TO_X_COORDINATE 
-00261  086F  A0 00                 LDY #0
-00262  0871  A5 C5                 LDA X_TEMP
-00263  0873  65 C7                 ADC X_INCR_VAL
-00264  0875  85 C5                 STA X_TEMP ; NOTE: DOES NOT RESET CARRY FLAG
-00265  0877  90 15                 BCC @END ; IF C=0, NOTHING MORE REQUIRED
-00266  0879             
-00267  0879                        ; C=1, WE HAVE TO DEAL WITH THE HIGH BITS
-00268  0879  A5 C6                 LDA SPRITE_MASK
-00269  087B  25 C8                 AND SPRITE_X_HI_TEMP ; CONTAINS THE HI BITS OF SPRITE X-LOCATIONS
-00270  087D  D0 07                 BNE @CLEAR_HI_BIT
-00271  087F             
-00272  087F             @SET_HI_BIT 
-00273  087F  A5 C8                 LDA SPRITE_X_HI_TEMP
-00274  0881  05 C6                 ORA SPRITE_MASK
-00275  0883  4C 8C 08              JMP @MOD_HI_BIT
-00276  0886             
-00277  0886             @CLEAR_HI_BIT 
-00278  0886  A5 C6                 LDA SPRITE_MASK
-00279  0888             
-00280  0888             
-00281  0888  49 FF                 EOR #$FF
-00282  088A  25 C8                 AND SPRITE_X_HI_TEMP
-00283  088C             @MOD_HI_BIT 
-00284  088C  85 C8                 STA SPRITE_X_HI_TEMP
-00285  088E  60         @END       RTS
-00286  088F             
-00287  088F             INITIALIZE_COCONUT_SPRITE ; SPRITE 2
-00288  088F                        ; SET THE COCONUT'S 10 COLOR
-00289  088F  A9 01                 LDA #WHITE
-00290  0891  8D 29 D0              STA $D029
-00291  0894             
-00292  0894                        ; TELL VIC WHERE THE FIRST COCONUT FRAME IS
-00293  0894  A9 BE                 LDA #COCONUT_HORZ
-00294  0896  8D FA 07              STA COCONUT_DATA_PTR
-00295  0899                        
-00296  0899                        ; INITAL COCONUT X (TODO: CHANGE ONCE ANIMATIONS BEGIN)
-00297  0899  A9 3C                 LDA #60
-00298  089B  8D 04 D0              STA COCONUT_X_PTR
-00299  089E             
-00300  089E                        ; INITIAL COCONUT Y (TODO: CHANGE ONCE ANIMATIONS BEGIN)
-00301  089E  A9 64                 LDA #100
-00302  08A0  8D 05 D0              STA COCONUT_Y_PTR
-00303  08A3  60                    RTS
-00304  08A4             
-00305  08A4             INITIALIZE_SEAGULL_SPRITE ; SPRITE 1
-00306  08A4                        ; SET THE GULL'S 10 COLOR
-00307  08A4  A9 01                 LDA #WHITE
-00308  08A6  8D 28 D0              STA $D028
-00309  08A9             
-00310  08A9                        ; TELL VIC WHERE THE FIRST GULL FRAME IS
-00311  08A9  A9 BD                 LDA #SEAGULL_WINGS_DOWN
-00312  08AB  8D F9 07              STA SEAGULL_DATA_PTR
-00313  08AE             
-00314  08AE                        ; INITIAL GULL X (TODO: CHANGE ONCE ANIMATIONS BEGIN)
-00315  08AE  A9 3C                 LDA #60
-00316  08B0  8D 02 D0              STA SEAGULL_X_PTR
-00317  08B3             
-00318  08B3                        ; INITIAL GULL Y (NOTE: SHOULD NEVER CHANGE)
-00319  08B3  A9 32                 LDA #50
-00320  08B5  8D 03 D0              STA SEAGULL_Y_PTR
-00321  08B8  60                    RTS
-00322  08B9             
-00323  08B9             INITIALIZE_PIRATE_SPRITE ; SPRITE 2
-00324  08B9                        ; SET THE PIRATE'S 10 COLOR
-00325  08B9  A9 09                 LDA #BROWN
-00326  08BB  8D 27 D0              STA $D027
-00327  08BE             
-00328  08BE                        ; TELL VIC WHERE THE FIRST PIRATE FRAME IS
-00329  08BE  A9 BA                 LDA #PIRATE_STANDING
-00330  08C0  8D F8 07              STA PIRATE_DATA_PTR
-00331  08C3             
-00332  08C3                        ; INITIAL PIRATE X
-00333  08C3  A9 3C                 LDA #60
-00334  08C5  8D 00 D0              STA PIRATE_X_PTR
-00335  08C8             
-00336  08C8                        ; INITIAL PIRATE Y (NOTE: SHOULD NEVER CHANGE)
-00337  08C8  A9 BC                 LDA #188
-00338  08CA  8D 01 D0              STA PIRATE_Y_PTR
-00339  08CD  60                    RTS
-00340  08CE                        
-00341  08CE             REDIRECT_TO_CUSTOM_CHARSET 
-00342  08CE  A9 1C                 LDA #28
-00343  08D0  8D 18 D0              STA $D018
-00344  08D3  60                    RTS
-00345  08D4             
-00346  08D4             APPLY_PER_CHAR_COLORS 
-00347  08D4             
-00348  08D4             
-00349  08D4  A0 00                 LDY #0
-00350  08D6  A9 D8                 LDA #>$D800
-00351  08D8  85 C3                 STA DEST_HI
-00352  08DA  A9 00                 LDA #<$D800
-00353  08DC  85 C2                 STA DEST
-00354  08DE             
-00355  08DE             
-00356  08DE  A0 00                 LDY #0
-00357  08E0  A9 98                 LDA #>$9800
-00358  08E2  85 C1                 STA SRC_HI
-00359  08E4  A9 00                 LDA #<$9800
-00360  08E6  85 C0                 STA SRC
-00361  08E8  20 8E 09              JSR MOVE_256_BYTES
-00362  08EB             
-00363  08EB             
-00364  08EB             
-00365  08EB  A0 00                 LDY #0
-00366  08ED  A9 D9                 LDA #>$D900
-00367  08EF  85 C3                 STA DEST_HI
-00368  08F1  A9 00                 LDA #<$D900
-00369  08F3  85 C2                 STA DEST
-00370  08F5             
-00371  08F5             
-00372  08F5  A0 00                 LDY #0
-00373  08F7  A9 99                 LDA #>$9900
-00374  08F9  85 C1                 STA SRC_HI
-00375  08FB  A9 00                 LDA #<$9900
-00376  08FD  85 C0                 STA SRC
-00377  08FF  20 8E 09              JSR MOVE_256_BYTES
-00378  0902             
-00379  0902             
-00380  0902             
-00381  0902  A0 00                 LDY #0
-00382  0904  A9 DA                 LDA #>$DA00
-00383  0906  85 C3                 STA DEST_HI
-00384  0908  A9 00                 LDA #<$DA00
-00385  090A  85 C2                 STA DEST
-00386  090C             
-00387  090C             
-00388  090C  A0 00                 LDY #0
-00389  090E  A9 9A                 LDA #>$9A00
-00390  0910  85 C1                 STA SRC_HI
-00391  0912  A9 00                 LDA #<$9A00
-00392  0914  85 C0                 STA SRC
-00393  0916  20 8E 09              JSR MOVE_256_BYTES
-00394  0919             
-00395  0919             
-00396  0919             
-00397  0919  A0 00                 LDY #0
-00398  091B  A9 DB                 LDA #>$DB00
-00399  091D  85 C3                 STA DEST_HI
-00400  091F  A9 00                 LDA #<$DB00
-00401  0921  85 C2                 STA DEST
-00402  0923             
-00403  0923             
-00404  0923  A0 00                 LDY #0
-00405  0925  A9 9B                 LDA #>$9B00
-00406  0927  85 C1                 STA SRC_HI
-00407  0929  A9 00                 LDA #<$9B00
-00408  092B  85 C0                 STA SRC
-00409  092D  20 8E 09              JSR MOVE_256_BYTES
-00410  0930             
-00411  0930  60                    RTS
-00412  0931             
-00413  0931             ; COPIES _SCREEN_DATA TO THE THE SCREEN RAM AT $0400
-00414  0931             ; EVEN THOUGH SCREEN DATA IS ONLY 1000 BYTES, IT WILL COPY 1024!!!
-00415  0931             COPY_SCREEN_DATA_TO_SCREEN_RAM 
-00416  0931                        ; FIRST 256-BYTE BLOCK IS $0400-$04FF, FROM
-00417  0931             
-00418  0931             
-00419  0931  A0 00                 LDY #0
-00420  0933  A9 04                 LDA #>$0400
-00421  0935  85 C3                 STA DEST_HI
-00422  0937  A9 00                 LDA #<$0400
-00423  0939  85 C2                 STA DEST
-00424  093B             
-00425  093B             
-00426  093B  A0 00                 LDY #0
-00427  093D  A9 9C                 LDA #>SD_BLOCK_1
-00428  093F  85 C1                 STA SRC_HI
-00429  0941  A9 00                 LDA #<SD_BLOCK_1
-00430  0943  85 C0                 STA SRC
-00431  0945  20 8E 09              JSR MOVE_256_BYTES
-00432  0948                        
-00433  0948                        ; SECOND 256-BYTE BLOCK IS $0500-$05FF
-00434  0948             
-00435  0948             
-00436  0948  A0 00                 LDY #0
-00437  094A  A9 05                 LDA #>$0500
-00438  094C  85 C3                 STA DEST_HI
-00439  094E  A9 00                 LDA #<$0500
-00440  0950  85 C2                 STA DEST
-00441  0952             
-00442  0952             
-00443  0952  A0 00                 LDY #0
-00444  0954  A9 9D                 LDA #>SD_BLOCK_2
-00445  0956  85 C1                 STA SRC_HI
-00446  0958  A9 00                 LDA #<SD_BLOCK_2
-00447  095A  85 C0                 STA SRC
-00448  095C  20 8E 09              JSR MOVE_256_BYTES
-00449  095F             
-00450  095F                        ; THIRD 256-BYTE BLOCK IS $0600-$06FF
-00451  095F             
-00452  095F             
-00453  095F  A0 00                 LDY #0
-00454  0961  A9 06                 LDA #>$0600
-00455  0963  85 C3                 STA DEST_HI
-00456  0965  A9 00                 LDA #<$0600
-00457  0967  85 C2                 STA DEST
-00458  0969             
-00459  0969             
-00460  0969  A0 00                 LDY #0
-00461  096B  A9 9E                 LDA #>SD_BLOCK_3
-00462  096D  85 C1                 STA SRC_HI
-00463  096F  A9 00                 LDA #<SD_BLOCK_3
-00464  0971  85 C0                 STA SRC
-00465  0973  20 8E 09              JSR MOVE_256_BYTES
-00466  0976             
-00467  0976                        ; FOURTH 256-BYTE BLOCK IS $0700-$07FF
-00468  0976             
-00469  0976             
-00470  0976  A0 00                 LDY #0
-00471  0978  A9 07                 LDA #>$0700
-00472  097A  85 C3                 STA DEST_HI
-00473  097C  A9 00                 LDA #<$0700
-00474  097E  85 C2                 STA DEST
-00475  0980             
-00476  0980             
-00477  0980  A0 00                 LDY #0
-00478  0982  A9 9F                 LDA #>SD_BLOCK_4
-00479  0984  85 C1                 STA SRC_HI
-00480  0986  A9 00                 LDA #<SD_BLOCK_4
-00481  0988  85 C0                 STA SRC
-00482  098A  20 8E 09              JSR MOVE_256_BYTES
-00483  098D             
-00484  098D  60                    RTS
-00485  098E             
-00486  098E             ; COPIES 256 TYES FROM SRC TO DEST
-00487  098E             ; SRC: FIRST (LOW) BYTE OF ADDRESS CONTAINING THE SOURCE ADDRESS
-00488  098E             ; DEST: FIRST (LOW) BYTE OF ADDRESS CONTAINING THE DESTINATION ADDRESS
-00489  098E             ; CORRUPTS REGISTERS A AND Y
-00490  098E             MOVE_256_BYTES 
-00491  098E  A0 00                 LDY #0
-00492  0990  B1 C0      @LOOP      LDA (SRC),Y
-00493  0992  91 C2                 STA (DEST),Y
-00494  0994  C8                    INY ; NOTE THAT THIS WILL ROLLOVER TO ZERO AT "Y=256"
-00495  0995  D0 F9                 BNE @LOOP
-00496  0997  60                    RTS
-00497  0998             
-00498  0998             
-00499  0998             
-00500  0998             ; LDA WILL BE CORRUPTED
-00501  0998             ENABLE_MULTICOLOR_CHAR_MODE 
-00502  0998  AD 16 D0              LDA $D016
-00503  099B  09 10                 ORA #16
-00504  099D  8D 16 D0              STA $D016
-00505  09A0  60                    RTS
-00506  09A1             
-00507  09A1             ; LDA WILL BE CORRUPTED
-00508  09A1             SET_SHARED_SCREEN_COLORS 
-00509  09A1                        ; SET THE 00 COLOR
-00510  09A1  A9 00                 LDA #BLACK
-00511  09A3  8D 21 D0              STA $D021
-00512  09A6             
-00513  09A6                        ; SET THE 01 COLOR
-00514  09A6  A9 0C                 LDA #GREY2
-00515  09A8  8D 22 D0              STA $D022
-00516  09AB             
-00517  09AB                        ; SET THE 10 COLOR
-00518  09AB  A9 04                 LDA #VIOLET
-00519  09AD  8D 23 D0              STA $D023
-00520  09B0             
-00521  09B0  60                    RTS
-00522  09B1             
-00523  09B1             
-00524  09B1             UPDATE_PIRATE 
-00525  09B1  20 BF 09              JSR DETERMINE_MOVEMENT_DISTANCE
-00526  09B4  A5 C7                 LDA X_INCR_VAL
-00527  09B6  F0 06                 BEQ @END ; RETURN IF X_INCR_VAL HASN'T CHANGED
-00528  09B8                        
-00529  09B8  20 0E 0A              JSR MOVE_PIRATE
-00530  09BB  20 2E 0A              JSR ANIMATE_PIRATE
-00531  09BE  60         @END       RTS
-00532  09BF             
-00533  09BF             ; POLLS KEYBOARD AND SETS X_INCR_VAL BASED ON KEY PRESSED
-00534  09BF             ; IF 'S' PRESSED -- X_INCR_VAL GETS A POSITIVE VALUE
-00535  09BF             ; IF 'A' PRESSED -- X_INCR_VAL GETS A NEGATIVE VALUE
-00536  09BF             ; X_INCR_VAL WILL BE ZERO IF THE DISTANCE MOVES BEYOND THE PIRATE'S BOUNDS
-00537  09BF             PIRATE_X_INCREMENT=5 
-00538  09BF             DETERMINE_MOVEMENT_DISTANCE 
-00539  09BF  A9 00                 LDA #0 ; INIT X_INCR_VAL TO ZERO
-00540  09C1  85 C7                 STA X_INCR_VAL
-00541  09C3  20 ED 09              JSR CHECK_FOR_S_KEY
-00542  09C6  A5 C9                 LDA INPUT_FLAGS
-00543  09C8  C9 02                 CMP #%00000010
-00544  09CA  A9 05                 LDA #PIRATE_X_INCREMENT
-00545  09CC  D0 1E                 BNE @END
-00546  09CE                        
-00547  09CE                        ; CHECK TO SEE IF WE'RE BEYOND X-MAX FOR PIRATE
-00548  09CE                        ; THIS MEANS THE 9TH BIT IS SET AND PIRATE_X_PTR > 41
-00549  09CE  AD 10 D0              LDA $D010
-00550  09D1  29 01                 AND #%00000001
-00551  09D3  F0 13                 BEQ @STANDARD_INCREMENT ; 9TH BIT NOT SET, WE'RE DONE
-00552  09D5                        
-00553  09D5                        ; 9TH BIT IS SET, SEE IF PIRATE_X_PTR+INCREMENT > 41
-00554  09D5  AD 00 D0              LDA PIRATE_X_PTR
-00555  09D8  69 05                 ADC #PIRATE_X_INCREMENT
-00556  09DA  C9 29                 CMP #41
-00557  09DC  10 0A                 BPL @STANDARD_INCREMENT ; WE'RE <41 SO NO NEED TO CLIP
-00558  09DE  A9 29                 LDA #41
-00559  09E0  ED 00 D0              SBC PIRATE_X_PTR
-00560  09E3  85 C7                 STA X_INCR_VAL
-00561  09E5  4C EC 09              JMP @END
-00562  09E8             @STANDARD_INCREMENT 
-00563  09E8  A9 05                 LDA #PIRATE_X_INCREMENT
-00564  09EA  85 C7                 STA X_INCR_VAL
-00565  09EC  60         @END       RTS
-00566  09ED             
-00567  09ED             ; CHECKS FOR PRESS OF THE 'S' KEY
-00568  09ED             ; INPUT: NONE
-00569  09ED             ; OUTPUT: INPUT_FLAGS = %00000010 IF 'S' PRESSED, $00 OTHERWISE
-00570  09ED             ;
-00571  09ED             ; ADAPTED FROM HTTP://C64-WIKI.COM/WIKI/KEYBOARD#ASSEMBLER
-00572  09ED             PRA        = $DC00 ; CIA#1, PORT REGISTER A
-00573  09ED             DDRA       = $DC02 ; CIA#1, DATA DIRECTION REGISTER A
-00574  09ED             PRB        = $DC01 ; CIA#1, PORT REGISTER B
-00575  09ED             DDRB       = $DC03 ; CIA#1, DATA DIRECTION REGISTER B
-00576  09ED             CHECK_FOR_S_KEY 
-00577  09ED  A9 00                 LDA #0
-00578  09EF  85 C9                 STA INPUT_FLAGS
-00579  09F1             
-00580  09F1  78                    SEI ; DEACTIVATE INTERRUPTS
-00581  09F2  A9 FF                 LDA #%11111111 ; MAKE PORT A THE OUTPUTS
-00582  09F4  8D 02 DC              STA DDRA
-00583  09F7                        
-00584  09F7  A9 00                 LDA #%00000000 ; MAKE PORT B THE INPUTS
-00585  09F9  8D 03 DC              STA DDRB
-00586  09FC             
-00587  09FC  A9 FD                 LDA #%11111101 ; TESTING COL1 OF THE KB MATRIX
-00588  09FE  8D 00 DC              STA PRA
-00589  0A01             
-00590  0A01  AD 01 DC              LDA PRB
-00591  0A04  29 20                 AND #%00100000 ; MASKING ROW 5
-00592  0A06  D0 05                 BNE @END
-00593  0A08  A9 02                 LDA #%00000010 ; SET THE BIT INDICATING 'S' WAS PRESSED
-00594  0A0A  85 C9                 STA INPUT_FLAGS
-00595  0A0C             
-00596  0A0C  58                    CLI ; REACTIVE INTERRUPTS
-00597  0A0D  60         @END       RTS
-00598  0A0E             
-00599  0A0E             MOVE_PIRATE 
-00600  0A0E  A5 C4                 LDA LOOP_TICK
-00601  0A10  29 00                 AND #FASTEST_SPEED
-00602  0A12  C9 00                 CMP #FASTEST_SPEED
-00603  0A14  D0 17                 BNE @END
-00604  0A16                        
-00605  0A16                        ; PERFORM THE MOVEMENT
-00606  0A16  A0 00                 LDY #0
-00607  0A18  A9 01                 LDA #%00000001
-00608  0A1A  85 C6                 STA SPRITE_MASK
-00609  0A1C  AD 00 D0              LDA PIRATE_X_PTR
-00610  0A1F  85 C5                 STA X_TEMP
-00611  0A21  A9 01                 LDA #1
-00612  0A23  85 C7                 STA X_INCR_VAL
-00613  0A25  20 6F 08              JSR ADD_TO_X_COORDINATE
-00614  0A28  A5 C5                 LDA X_TEMP
-00615  0A2A  8D 00 D0              STA PIRATE_X_PTR
-00616  0A2D             
-00617  0A2D  60         @END       RTS
-00618  0A2E             
-00619  0A2E             ANIMATE_PIRATE 
-00620  0A2E  60                    RTS
-00621  0A2F             
-00622  0A2F             UPDATE_SEAGULL 
-00623  0A2F  20 36 0A              JSR ANIMATE_SEAGULL
-00624  0A32  20 53 0A              JSR MOVE_SEAGULL
-00625  0A35  60                    RTS
-00626  0A36             
-00627  0A36             ; SWITCHES BETWEEN SEAGULL ANIMATION FRAMES
-00628  0A36             ANIMATE_SEAGULL 
-00629  0A36                        ; SWITCH ANIMATION FRAME
-00630  0A36  A5 C4                 LDA LOOP_TICK
-00631  0A38  29 00                 AND #FASTEST_SPEED ; AND WITH THE SPEED
-00632  0A3A  C9 00                 CMP #FASTEST_SPEED ; SEE IF THE RESULT MATCHES THE SPEED
-00633  0A3C  D0 14                 BNE @END ; SKIP ANIMATION ON NO MATCH (IT'S NOT YET TIME TO FIRE)
-00634  0A3E                        
-00635  0A3E                        ; PERFORM THE ANIMATION
-00636  0A3E             
-00637  0A3E                        ; PICK THE APPROPRIATE ANIMATION, BASED ON CONTENTS
-00638  0A3E                        ; OF SEAGULL_DATA_PTR
-00639  0A3E  AD F9 07              LDA SEAGULL_DATA_PTR
-00640  0A41  C9 BC                 CMP #SEAGULL_WINGS_UP
-00641  0A43  F0 08                 BEQ @CHOOSE_WINGS_DOWN
-00642  0A45             @CHOOSE_WINGS_UP 
-00643  0A45  A9 BC                 LDA #SEAGULL_WINGS_UP
-00644  0A47  8D F9 07              STA SEAGULL_DATA_PTR
-00645  0A4A  4C 52 0A              JMP @END
-00646  0A4D             
-00647  0A4D             @CHOOSE_WINGS_DOWN 
-00648  0A4D  A9 BD                 LDA #SEAGULL_WINGS_DOWN
-00649  0A4F  8D F9 07              STA SEAGULL_DATA_PTR
-00650  0A52  60         @END       RTS
-00651  0A53             
-00652  0A53             ; ADVANCES THE SEAGULL TO THE RIGHT, WRAPPING AROUND TO ZERO APPROPRIATELY
-00653  0A53             MOVE_SEAGULL 
-00654  0A53  A5 C4                 LDA LOOP_TICK
-00655  0A55  29 00                 AND #FASTEST_SPEED
-00656  0A57  C9 00                 CMP #FASTEST_SPEED
-00657  0A59  D0 1F                 BNE @END
-00658  0A5B                        
-00659  0A5B                        ; PERFORM THE MOVEMENT
-00660  0A5B  A9 02                 LDA #%00000010 ; SET THE SPRITE MASK
-00661  0A5D  85 C6                 STA SPRITE_MASK
-00662  0A5F             
-00663  0A5F  AD 02 D0              LDA SEAGULL_X_PTR ; SET THE SEAGULL X LOW BYTE
-00664  0A62  85 C5                 STA X_TEMP
-00665  0A64             
-00666  0A64  A9 01                 LDA #1 ; SET THE INCREMENT VALUE
-00667  0A66  85 C7                 STA X_INCR_VAL
-00668  0A68             
-00669  0A68  AD 10 D0              LDA $D010 ; COPY $D010 INTO SPRITE_X_HI_TEMP
-00670  0A6B  85 C8                 STA SPRITE_X_HI_TEMP
-00671  0A6D             
-00672  0A6D  20 6F 08              JSR ADD_TO_X_COORDINATE
-00673  0A70             
-00674  0A70  A5 C5                 LDA X_TEMP ; COPY X_TEMP BACK INTO SEAGULL_X_PTR
-00675  0A72  8D 02 D0              STA SEAGULL_X_PTR
-00676  0A75             
-00677  0A75  A5 C8                 LDA SPRITE_X_HI_TEMP
-00678  0A77  8D 10 D0              STA $D010
-00679  0A7A             
-00680  0A7A                        ; NOT GONNA CHECK FOR X-AXIS WRAPPING; RIGHT NOW WILL WRAP
-00681  0A7A                        ; AT X=512, GIVING A LITTLE BIT OF RESPITE FOR PLAYER BEFORE
-00682  0A7A                        ; THE NEXT PASS. ALSO I'M LAZY.
-00683  0A7A  60         @END       RTS
-00684  0A7B             
-00685  0A7B             *=$2E80
-00686  2E80             ; PIRATE_STANDING
-00687  2E80             _PIRATE_STANDING 
-00688  2E80  0A 80 00              BYTE $0A,$80,$00
-00689  2E83  2A A0 00              BYTE $2A,$A0,$00
-00690  2E86  2A A0 00              BYTE $2A,$A0,$00
-00691  2E89  AA A0 00              BYTE $AA,$A0,$00
-00692  2E8C  87 50 00              BYTE $87,$50,$00
-00693  2E8F  85 50 00              BYTE $85,$50,$00
-00694  2E92  05 40 00              BYTE $05,$40,$00
-00695  2E95  0F C0 00              BYTE $0F,$C0,$00
-00696  2E98  2F E0 00              BYTE $2F,$E0,$00
-00697  2E9B  AF E8 00              BYTE $AF,$E8,$00
-00698  2E9E  97 E8 00              BYTE $97,$E8,$00
-00699  2EA1  A5 E8 00              BYTE $A5,$E8,$00
-00700  2EA4  AA 6A 00              BYTE $AA,$6A,$00
-00701  2EA7  AA 9A 00              BYTE $AA,$9A,$00
-00702  2EAA  3F D6 00              BYTE $3F,$D6,$00
-00703  2EAD  3F F5 00              BYTE $3F,$F5,$00
-00704  2EB0  0F C1 40              BYTE $0F,$C1,$40
-00705  2EB3  2B A0 50              BYTE $2B,$A0,$50
-00706  2EB6  28 A0 D7              BYTE $28,$A0,$D7
-00707  2EB9  A8 A0 D7              BYTE $A8,$A0,$D7
-00708  2EBC  A8 A3 55              BYTE $A8,$A3,$55
-00709  2EBF  00                    BYTE $00
-00710  2EC0             
-00711  2EC0             ; PIRATE_RUNNING
-00712  2EC0             _PIRATE_RUNNING 
-00713  2EC0  00 A8 00              BYTE $00,$A8,$00
-00714  2EC3  02 AA 00              BYTE $02,$AA,$00
-00715  2EC6  02 AA 00              BYTE $02,$AA,$00
-00716  2EC9  0A AA 00              BYTE $0A,$AA,$00
-00717  2ECC  08 75 00              BYTE $08,$75,$00
-00718  2ECF  08 55 00              BYTE $08,$55,$00
-00719  2ED2  00 54 00              BYTE $00,$54,$00
-00720  2ED5  01 FC 00              BYTE $01,$FC,$00
-00721  2ED8  01 FA 00              BYTE $01,$FA,$00
-00722  2EDB  09 7A 00              BYTE $09,$7A,$00
-00723  2EDE  0A AE 00              BYTE $0A,$AE,$00
-00724  2EE1  0A A6 00              BYTE $0A,$A6,$00
-00725  2EE4  03 D6 00              BYTE $03,$D6,$00
-00726  2EE7  03 F6 80              BYTE $03,$F6,$80
-00727  2EEA  03 F6 80              BYTE $03,$F6,$80
-00728  2EED  03 FD C0              BYTE $03,$FD,$C0
-00729  2EF0  0A FD 40              BYTE $0A,$FD,$40
-00730  2EF3  2A 3A 40              BYTE $2A,$3A,$40
-00731  2EF6  28 0A 40              BYTE $28,$0A,$40
-00732  2EF9  28 02 50              BYTE $28,$02,$50
-00733  2EFC  28 0D 54              BYTE $28,$0D,$54
-00734  2EFF  00                    BYTE $00
-00735  2F00             
-00736  2F00             ; SEAGULL_WINGS_UP
-00737  2F00             _SEAGULL_WINGS_UP 
-00738  2F00  00 00 00              BYTE $00,$00,$00
-00739  2F03  00 50 00              BYTE $00,$50,$00
-00740  2F06  01 54 00              BYTE $01,$54,$00
-00741  2F09  05 55 00              BYTE $05,$55,$00
-00742  2F0C  15 05 00              BYTE $15,$05,$00
-00743  2F0F  00 05 40              BYTE $00,$05,$40
-00744  2F12  00 15 04              BYTE $00,$15,$04
-00745  2F15  01 55 55              BYTE $01,$55,$55
-00746  2F18  55 55 54              BYTE $55,$55,$54
-00747  2F1B  05 55 50              BYTE $05,$55,$50
-00748  2F1E  01 55 00              BYTE $01,$55,$00
-00749  2F21  05 40 00              BYTE $05,$40,$00
-00750  2F24  04 00 00              BYTE $04,$00,$00
-00751  2F27  00 00 00              BYTE $00,$00,$00
-00752  2F2A  00 00 00              BYTE $00,$00,$00
-00753  2F2D  00 00 00              BYTE $00,$00,$00
-00754  2F30  00 00 00              BYTE $00,$00,$00
-00755  2F33  00 00 00              BYTE $00,$00,$00
-00756  2F36  00 00 00              BYTE $00,$00,$00
-00757  2F39  00 00 00              BYTE $00,$00,$00
-00758  2F3C  00 00 00              BYTE $00,$00,$00
-00759  2F3F  00                    BYTE $00
-00760  2F40             
-00761  2F40             ; SEAGULL_WINGS_DOWN
-00762  2F40             _SEAGULL_WINGS_DOWN 
-00763  2F40  00 00 00              BYTE $00,$00,$00
-00764  2F43  00 00 00              BYTE $00,$00,$00
-00765  2F46  00 00 00              BYTE $00,$00,$00
-00766  2F49  00 00 00              BYTE $00,$00,$00
-00767  2F4C  00 00 00              BYTE $00,$00,$00
-00768  2F4F  00 00 04              BYTE $00,$00,$04
-00769  2F52  00 00 05              BYTE $00,$00,$05
-00770  2F55  01 55 54              BYTE $01,$55,$54
-00771  2F58  55 55 54              BYTE $55,$55,$54
-00772  2F5B  05 55 50              BYTE $05,$55,$50
-00773  2F5E  01 55 00              BYTE $01,$55,$00
-00774  2F61  01 54 00              BYTE $01,$54,$00
-00775  2F64  00 50 00              BYTE $00,$50,$00
-00776  2F67  01 40 00              BYTE $01,$40,$00
-00777  2F6A  05 00 00              BYTE $05,$00,$00
-00778  2F6D  00 00 00              BYTE $00,$00,$00
-00779  2F70  00 00 00              BYTE $00,$00,$00
-00780  2F73  00 00 00              BYTE $00,$00,$00
-00781  2F76  00 00 00              BYTE $00,$00,$00
-00782  2F79  00 00 00              BYTE $00,$00,$00
-00783  2F7C  00 00 00              BYTE $00,$00,$00
-00784  2F7F  00                    BYTE $00
-00785  2F80             
-00786  2F80             ; COCONUT_HORZ
-00787  2F80             _COCONUT_HORZ 
-00788  2F80  00 00 00              BYTE $00,$00,$00
-00789  2F83  00 00 00              BYTE $00,$00,$00
-00790  2F86  00 00 00              BYTE $00,$00,$00
-00791  2F89  00 00 00              BYTE $00,$00,$00
-00792  2F8C  00 00 00              BYTE $00,$00,$00
-00793  2F8F  00 00 00              BYTE $00,$00,$00
-00794  2F92  00 00 00              BYTE $00,$00,$00
-00795  2F95  00 00 00              BYTE $00,$00,$00
-00796  2F98  00 00 00              BYTE $00,$00,$00
-00797  2F9B  00 00 00              BYTE $00,$00,$00
-00798  2F9E  00 00 00              BYTE $00,$00,$00
-00799  2FA1  00 00 00              BYTE $00,$00,$00
-00800  2FA4  00 00 00              BYTE $00,$00,$00
-00801  2FA7  00 00 00              BYTE $00,$00,$00
-00802  2FAA  00 00 00              BYTE $00,$00,$00
-00803  2FAD  00 2A 00              BYTE $00,$2A,$00
-00804  2FB0  00 AA 80              BYTE $00,$AA,$80
-00805  2FB3  00 AA 80              BYTE $00,$AA,$80
-00806  2FB6  00 AA 80              BYTE $00,$AA,$80
-00807  2FB9  00 2A 00              BYTE $00,$2A,$00
-00808  2FBC  00 00 00              BYTE $00,$00,$00
-00809  2FBF  00                    BYTE $00
-00810  2FC0             
-00811  2FC0             ; COCONUT_VERT
-00812  2FC0             _COCONUT_VERT 
-00813  2FC0  00 00 00              BYTE $00,$00,$00
-00814  2FC3  00 00 00              BYTE $00,$00,$00
-00815  2FC6  00 00 00              BYTE $00,$00,$00
-00816  2FC9  00 00 00              BYTE $00,$00,$00
-00817  2FCC  00 00 00              BYTE $00,$00,$00
-00818  2FCF  00 00 00              BYTE $00,$00,$00
-00819  2FD2  00 00 00              BYTE $00,$00,$00
-00820  2FD5  00 00 00              BYTE $00,$00,$00
-00821  2FD8  00 00 00              BYTE $00,$00,$00
-00822  2FDB  00 00 00              BYTE $00,$00,$00
-00823  2FDE  00 00 00              BYTE $00,$00,$00
-00824  2FE1  00 00 00              BYTE $00,$00,$00
-00825  2FE4  00 00 00              BYTE $00,$00,$00
-00826  2FE7  00 00 00              BYTE $00,$00,$00
-00827  2FEA  00 08 00              BYTE $00,$08,$00
-00828  2FED  00 2A 00              BYTE $00,$2A,$00
-00829  2FF0  00 2A 00              BYTE $00,$2A,$00
-00830  2FF3  00 2A 00              BYTE $00,$2A,$00
-00831  2FF6  00 2A 00              BYTE $00,$2A,$00
-00832  2FF9  00 2A 00              BYTE $00,$2A,$00
-00833  2FFC  00 08 00              BYTE $00,$08,$00
-00834  2FFF  00                    BYTE $00
-00835  3000             
-00836  3000             
-00837  3000             *=$3000
-00838  3000             CHARDATA
-00839  3000  AA FF 5F              BYTE    $AA,$FF,$5F,$FF,$FF,$F7,$FF,$AA ; CHARACTER 0
-00840  3008  AA FF FF              BYTE    $AA,$FF,$FF,$DF,$FF,$FD,$7F,$AA ; CHARACTER 1
-00841  3010  AA FE FE              BYTE    $AA,$FE,$FE,$7E,$FE,$FE,$F6,$AA ; CHARACTER 2
-00842  3018  AA BF BF              BYTE    $AA,$BF,$BF,$BD,$BF,$BF,$9F,$AA ; CHARACTER 3
-00843  3020  96 96 96              BYTE    $96,$96,$96,$96,$96,$96,$96,$96 ; CHARACTER 4
-00844  3028  FF FF FF              BYTE    $FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF ; CHARACTER 5
-00845  3030  03 03 0F              BYTE    $03,$03,$0F,$0F,$3F,$3F,$FF,$FF ; CHARACTER 6
-00846  3038  0F 0F 0F              BYTE    $0F,$0F,$0F,$0F,$0F,$0F,$0F,$0F ; CHARACTER 7
-00847  3040  03 03 03              BYTE    $03,$03,$03,$03,$0F,$0F,$0F,$0F ; CHARACTER 8
-00848  3048  0F 0F 0F              BYTE    $0F,$0F,$0F,$0F,$03,$03,$03,$03 ; CHARACTER 9
-00849  3050  FF FF 3F              BYTE    $FF,$FF,$3F,$3F,$0F,$0F,$03,$03 ; CHARACTER 10
-00850  3058  3F 3F 3F              BYTE    $3F,$3F,$3F,$3F,$3F,$3F,$3F,$3F ; CHARACTER 11
-00851  3060  F0 F0 C0              BYTE    $F0,$F0,$C0,$C0,$C0,$00,$00,$00 ; CHARACTER 12
-00852  3068  0F 0F 03              BYTE    $0F,$0F,$03,$03,$03,$00,$00,$00 ; CHARACTER 13
-00853  3070  00 00 00              BYTE    $00,$00,$00,$C0,$C0,$C0,$F0,$F0 ; CHARACTER 14
-00854  3078  00 00 00              BYTE    $00,$00,$00,$03,$03,$03,$0F,$0F ; CHARACTER 15
-00855  3080  00 10 74              BYTE    $00,$10,$74,$10,$00,$00,$00,$00 ; CHARACTER 16
-00856  3088             
-00857  3088             ; SCREEN 1 -  SCREEN DATA; VIC BANK 3
-00858  3088             *=$9C00
-00859  9C00             ; SCREEN 1 -  SCREEN DATA
-00860  9C00             _SCREEN_DATA 
-00861  9C00  20 20 20              BYTE    $20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$10,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20
-00862  9C28  20 10 20              BYTE    $20,$10,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$10,$20
-00863  9C50  20 20 20              BYTE    $20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$10,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$10,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20
-00864  9C78  20 20 20              BYTE    $20,$20,$20,$20,$20,$20,$10,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20
-00865  9CA0  20 20 20              BYTE    $20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$10,$20,$20,$20,$20,$20,$20,$20
-00866  9CC8  20 20 20              BYTE    $20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$10,$20
-00867  9CF0  20 20 20              BYTE    $20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$10,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20
-00868  9D18  20 20 20              BYTE    $20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$10,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20
-00869  9D40  20 20 20              BYTE    $20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$10,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20
-00870  9D68  20 20 20              BYTE    $20,$20,$20,$10,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20
-00871  9D90  20 20 20              BYTE    $20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$10,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$03,$01,$20
-00872  9DB8  20 20 10              BYTE    $20,$20,$10,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$10,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$03,$01,$20
-00873  9DE0  20 20 20              BYTE    $20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$10,$20,$20,$20,$03,$01,$20
-00874  9E08  00 00 02              BYTE    $00,$00,$02,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$03,$01,$20
-00875  9E30  00 00 02              BYTE    $00,$00,$02,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$03,$01,$20
-00876  9E58  00 00 02              BYTE    $00,$00,$02,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$03,$01,$20
-00877  9E80  00 00 02              BYTE    $00,$00,$02,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$03,$01,$20
-00878  9EA8  00 00 02              BYTE    $00,$00,$02,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$03,$01,$20
-00879  9ED0  00 00 02              BYTE    $00,$00,$02,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$03,$01,$20
-00880  9EF8  00 00 02              BYTE    $00,$00,$02,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$03,$01,$20
-00881  9F20  00 02 00              BYTE    $00,$02,$00,$00,$00,$00,$00,$02,$00,$00,$01,$01,$00,$00,$02,$03,$00,$00,$00,$00,$03,$01,$03,$03,$00,$00,$01,$00,$00,$00,$00,$00,$01,$01,$00,$00,$00,$00,$00,$20
-00882  9F48  01 01 00              BYTE    $01,$01,$00,$02,$00,$03,$00,$00,$00,$0C,$0D,$01,$01,$0C,$0D,$01,$01,$0C,$0D,$01,$01,$01,$00,$00,$01,$00,$0C,$0D,$01,$01,$0C,$0D,$01,$01,$0C,$0D,$01,$00,$00,$20
-00883  9F70  00 01 01              BYTE    $00,$01,$01,$01,$01,$01,$01,$01,$01,$0E,$0F,$01,$01,$0E,$0F,$00,$00,$0E,$0F,$00,$01,$00,$00,$01,$01,$00,$0E,$0F,$01,$01,$0E,$0F,$00,$00,$0E,$0F,$01,$00,$00,$20
-00884  9F98  00 02 02              BYTE    $00,$02,$02,$00,$01,$01,$03,$00,$00,$00,$00,$00,$00,$00,$00,$03,$00,$00,$00,$01,$02,$01,$01,$01,$00,$01,$01,$00,$00,$03,$01,$00,$02,$00,$00,$00,$00,$02,$00,$20
-00885  9FC0  20 20 20              BYTE    $20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20
-00886  9FE8             
-00887  9FE8             *=$9800
-00888  9800             ; SCREEN 1 -  COLOUR DATA
-00889  9800             _COLOUR_DATA 
-00890  9800  00 00 00              BYTE    $00,$00,$00,$00,$00,$00,$00,$00,$0D,$0D,$0D,$0D,$0D,$0D,$0D,$0D,$0D,$0D,$0D,$00,$00,$00,$0A,$0D,$0E,$0E,$0E,$0E,$0E,$0E,$0E,$0E,$0E,$00,$00,$00,$00,$00,$00,$00
-00891  9828  00 0D 00              BYTE    $00,$0D,$00,$00,$00,$00,$00,$0D,$0E,$0E,$0E,$0E,$0E,$0E,$0E,$0E,$0E,$0E,$0A,$00,$00,$00,$0D,$0D,$0D,$0D,$0D,$0D,$0D,$0D,$0D,$0D,$0A,$00,$00,$00,$00,$00,$0D,$00
-00892  9850  00 00 0D              BYTE    $00,$00,$0D,$00,$00,$00,$00,$0D,$0D,$0D,$0D,$0D,$0D,$0D,$0D,$0D,$0D,$0A,$0A,$00,$00,$00,$0D,$0E,$0E,$0E,$0E,$0D,$0D,$0E,$0E,$0A,$0A,$00,$00,$00,$00,$00,$00,$00
-00893  9878  00 00 00              BYTE    $00,$00,$00,$00,$00,$00,$0D,$0D,$0E,$0E,$0E,$0E,$0E,$0E,$0E,$0E,$0E,$0A,$0A,$00,$00,$00,$0D,$0D,$0D,$0D,$0D,$0D,$0D,$0D,$0D,$0A,$0A,$00,$00,$00,$00,$00,$00,$00
-00894  98A0  00 0A 00              BYTE    $00,$0A,$00,$00,$00,$00,$00,$0D,$0D,$0D,$0D,$0D,$0D,$0D,$0D,$0D,$0D,$0A,$0A,$00,$00,$00,$0D,$0E,$0E,$0E,$0E,$0E,$0E,$0E,$0E,$0A,$0D,$00,$00,$00,$00,$00,$00,$00
-00895  98C8  00 00 00              BYTE    $00,$00,$00,$00,$00,$00,$00,$0D,$0E,$0E,$0E,$0E,$0E,$0E,$0E,$0E,$0E,$0E,$0A,$00,$00,$00,$0D,$0D,$0D,$0D,$0D,$0D,$0D,$0D,$0D,$0D,$0A,$00,$00,$00,$00,$00,$0D,$00
-00896  98F0  00 00 00              BYTE    $00,$00,$00,$00,$00,$00,$00,$00,$0D,$0D,$0D,$0D,$0D,$0D,$0D,$0D,$0D,$0D,$0D,$00,$00,$00,$0A,$0D,$0E,$0E,$0E,$0D,$0E,$0E,$0E,$0E,$0E,$00,$00,$00,$00,$00,$00,$00
-00897  9918  00 00 00              BYTE    $00,$00,$00,$00,$00,$00,$00,$00,$00,$0D,$0E,$0E,$0E,$0E,$0E,$0E,$0E,$0E,$0E,$0D,$00,$00,$00,$00,$0D,$0D,$0D,$0D,$0D,$0D,$0D,$0D,$0D,$0D,$0D,$00,$00,$00,$00,$00
-00898  9940  00 00 00              BYTE    $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$0D,$00,$00,$0A,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$0A,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
-00899  9968  0A 0A 0A              BYTE    $0A,$0A,$0A,$0D,$0A,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$0A,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$0A,$0A,$0A,$0A,$0A,$0A,$0A,$09,$09,$09,$09,$09
-00900  9990  0A 0A 0A              BYTE    $0A,$0A,$0A,$0A,$0A,$0A,$0A,$00,$00,$00,$0D,$00,$00,$00,$00,$0A,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$0A,$0A,$0A,$0A,$0A,$0A,$0A,$09,$09,$09,$09,$09
-00901  99B8  0A 0A 0D              BYTE    $0A,$0A,$0D,$0A,$0A,$0A,$0A,$0A,$00,$00,$00,$00,$00,$00,$00,$0A,$0D,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$0A,$0A,$0A,$0A,$0A,$0A,$00,$09,$09,$09,$09,$09
-00902  99E0  0A 0A 0A              BYTE    $0A,$0A,$0A,$0A,$0A,$0A,$0A,$0A,$0A,$0A,$00,$00,$00,$00,$00,$0A,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$0A,$0A,$0A,$09,$09,$0D,$09,$09,$09,$09,$09,$09
-00903  9A08  09 09 09              BYTE    $09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$0A,$0A,$0A,$0A,$0A,$0A,$0D,$0A,$0A,$0A,$0A,$0A,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09
-00904  9A30  09 09 09              BYTE    $09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09
-00905  9A58  09 09 09              BYTE    $09,$09,$09,$00,$00,$00,$09,$0D,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$00,$09,$09,$09
-00906  9A80  09 09 09              BYTE    $09,$09,$09,$00,$00,$00,$00,$00,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$0D,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$00,$09,$09,$09
-00907  9AA8  09 09 09              BYTE    $09,$09,$09,$00,$00,$00,$00,$00,$00,$0A,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$00,$09,$09,$09
-00908  9AD0  09 09 09              BYTE    $09,$09,$09,$00,$00,$00,$00,$00,$00,$0A,$0A,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$0D,$09,$09,$09,$09,$09,$09,$09,$09,$00,$00,$09,$09,$09
-00909  9AF8  09 09 09              BYTE    $09,$09,$09,$00,$00,$00,$00,$00,$0D,$0A,$09,$0A,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$00,$00,$09,$09,$09
-00910  9B20  09 09 09              BYTE    $09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09
-00911  9B48  09 09 09              BYTE    $09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09
-00912  9B70  09 09 09              BYTE    $09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09
-00913  9B98  09 09 09              BYTE    $09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09
-00914  9BC0  09 09 09              BYTE    $09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09
-00915  9BE8             
+00160  0810                        ;JSR COPY_SCREEN_DATA_TO_SCREEN_RAM
+00161  0810                        ;JSR ENABLE_MULTICOLOR_CHAR_MODE
+00162  0810                        ;JSR SET_SHARED_SCREEN_COLORS
+00163  0810                        ;JSR REDIRECT_TO_CUSTOM_CHARSET
+00164  0810                        ;JSR APPLY_PER_CHAR_COLORS
+00165  0810  20 AB 08              JSR INITIALIZE_PIRATE_SPRITE
+00166  0813  20 96 08              JSR INITIALIZE_SEAGULL_SPRITE
+00167  0816  20 81 08              JSR INITIALIZE_COCONUT_SPRITE
+00168  0819             
+00169  0819             
+00170  0819  A9 03                 LDA #CYAN
+00171  081B  8D 25 D0              STA $D025
+00172  081E             
+00173  081E  A9 06                 LDA #BLUE
+00174  0820  8D 26 D0              STA $D026
+00175  0823             
+00176  0823             
+00177  0823             
+00178  0823             
+00179  0823             
+00180  0823  A9 07                 LDA #$07
+00181  0825  8D 1C D0              STA $D01C
+00182  0828             
+00183  0828  A9 07                 LDA #$07
+00184  082A  8D 15 D0              STA $D015
+00185  082D             
+00186  082D             
+00187  082D             
+00188  082D             
+00189  082D                        ; INIT THE LOOP TICK
+00190  082D  A9 00                 LDA #$00
+00191  082F  85 C4                 STA LOOP_TICK ; INIT LOOP TICK TO ZERO
+00192  0831             
+00193  0831             INIT_RASTER_INTERRUPT 
+00194  0831                        ; THIS FROM HTTP://C64-WIKI.COM/WIKI/RASTER_INTERRUPT
+00195  0831             
+00196  0831                        ; SWITCH OFF INTERRUPTS FROM CIA-1
+00197  0831  A9 7F                 LDA #%01111111
+00198  0833  8D 0D DC              STA $DC0D
+00199  0836             
+00200  0836                        ;CLEAR MOST SIGNIFICANT BIT IN VIC'S RASTER REGISTER
+00201  0836  2D 11 D0              AND $D011
+00202  0839  8D 11 D0              STA $D011
+00203  083C             
+00204  083C                        ; SET THE RASTER LINE NUMBER WHERE INTERRUPT SHOULD OCCUR
+00205  083C  A9 00                 LDA #0 ; BEGINNING OF SCREEN REFRESH?
+00206  083E  8D 12 D0              STA $D012
+00207  0841             
+00208  0841                        ; SET THE INTERRUPT VECTOR TO POINT TO THE SERVICE ROUTINE
+00209  0841  A9 51                 LDA #<MAIN_GAME_LOOP
+00210  0843  8D 14 03              STA $0314
+00211  0846  A9 08                 LDA #>MAIN_GAME_LOOP
+00212  0848  8D 15 03              STA $0315
+00213  084B             
+00214  084B                        ; ENABLE RASTER INTERRUPT SIGNALS FROM VIC
+00215  084B  A9 01                 LDA #%00000001
+00216  084D  8D 1A D0              STA $D01A
+00217  0850             
+00218  0850                        ; RETURN TO BASIC
+00219  0850  60                    RTS
+00220  0851                        
+00221  0851             
+00222  0851             MAIN_GAME_LOOP 
+00223  0851                        ; UPDATE THE PIRATE'S LOCATION AND ANIMATION
+00224  0851  20 A3 09              JSR UPDATE_PIRATE
+00225  0854             
+00226  0854                        ; UPDATE THE SEAGULL'S LOCATION AND ANIMATION
+00227  0854  20 21 0A              JSR UPDATE_SEAGULL
+00228  0857             
+00229  0857                        ; UPDATE THE COCONUT'S LOCATION AND ANIMATION
+00230  0857             
+00231  0857                        ; INCREMENT THE LOOP TICK (NOTE IT ROLLS OVER AUTOMATICALLY)
+00232  0857  A5 C4                 LDA LOOP_TICK
+00233  0859  69 01                 ADC #1
+00234  085B  85 C4                 STA LOOP_TICK
+00235  085D             
+00236  085D                        ; FOR NOW, INFINITE GAME LOOP
+00237  085D                        ;LDA #0
+00238  085D                        ;BEQ MAIN_GAME_LOOP
+00239  085D             
+00240  085D                        ;RTS
+00241  085D                        ; ACKNOWLEDGE THE INTERRUPT BY CLEARING THE VIC'S INTERRUPT FLAG
+00242  085D  0E 19 D0              ASL $D019
+00243  0860                        
+00244  0860                        ; JUMP INTO THE KERNAL'S NORMAL INTERRUPT SERVICE ROUTINE
+00245  0860  4C 31 EA              JMP $EA31
+00246  0863             
+00247  0863             ; MOVES A SPRITE BY INCREMENTING ITS X-COORDINATE. DOES NOT WRAP!
+00248  0863             
+00249  0863             ; INPUTS:
+00250  0863             ; X_TEMP: CONTAINS THE X-VALUE WE'RE INCREMENTING
+00251  0863             ; X_INCR_VAL: THE AMOUNT TO INCREMENT X. 255 MAX (8-BIT LIMIT)
+00252  0863             ; SPRITE_MASK: BIT SET FOR THE SPRITE GETTING INCREMENTED
+00253  0863             ; SPRITE_X_HI_TEMP: BYTE TO HOLD THE HIGH BIT ($D010-STYLE) OF THE
+00254  0863             ;                   SPRITE'S X-COORDINAT. INITIALIZE WITH $D010
+00255  0863             ; OUTPUTS:
+00256  0863             ; X_TEMP: IS THE NEW LOW BYTE OF THE CALLER'S X-POSITION
+00257  0863             ; SPRITE_X_HI_TEMP: APPROPRIATE SPRITE HI BIT IS SET/UNSET AS NEEDED. IT
+00258  0863             ;                   GUARANTEES TO PRESERVE OTHER SPRITES' HI BITS, SO IT CAN
+00259  0863             ;                   BE COPIED DIRECTLY BACK TO $D010 IF NEEDED.
+00260  0863             ADD_TO_X_COORDINATE 
+00261  0863                        ; PERFORM THE ADDITION ON X_TEMP
+00262  0863  18                    CLC
+00263  0864  A5 C5                 LDA X_TEMP
+00264  0866  65 C7                 ADC X_INCR_VAL
+00265  0868  85 C5                 STA X_TEMP
+00266  086A             
+00267  086A                        ; IF NO CARRY, WE'RE DONE
+00268  086A  B0 01                 BCS @CARRY_RESULT
+00269  086C  60                    RTS
+00270  086D             
+00271  086D             @CARRY_RESULT 
+00272  086D                        ; HERE WE HAVE TO DEAL WITH THE HIGH BIT
+00273  086D                        ; SEE IF HI BIT IS SET OR NOT
+00274  086D  A5 C8                 LDA SPRITE_X_HI_TEMP
+00275  086F  25 C6                 AND SPRITE_MASK
+00276  0871  F0 09                 BEQ @HI_BIT_ZERO
+00277  0873             
+00278  0873                        ; HI BIT IS 1, UNSET IT
+00279  0873  A5 C6                 LDA SPRITE_MASK
+00280  0875             
+00281  0875             
+00282  0875  49 FF                 EOR #$FF
+00283  0877  25 C8                 AND SPRITE_X_HI_TEMP
+00284  0879  85 C8                 STA SPRITE_X_HI_TEMP
+00285  087B  60                    RTS
+00286  087C                        
+00287  087C             @HI_BIT_ZERO 
+00288  087C                        ; SIMPLY SET THE HI BIT AND WE'RE DONE
+00289  087C  A5 C8                 LDA SPRITE_X_HI_TEMP
+00290  087E  05 C6                 ORA SPRITE_MASK
+00291  0880  60                    RTS
+00292  0881             
+00293  0881             INITIALIZE_COCONUT_SPRITE ; SPRITE 2
+00294  0881                        ; SET THE COCONUT'S 10 COLOR
+00295  0881  A9 01                 LDA #WHITE
+00296  0883  8D 29 D0              STA $D029
+00297  0886             
+00298  0886                        ; TELL VIC WHERE THE FIRST COCONUT FRAME IS
+00299  0886  A9 BE                 LDA #COCONUT_HORZ
+00300  0888  8D FA 07              STA COCONUT_DATA_PTR
+00301  088B                        
+00302  088B                        ; INITAL COCONUT X (TODO: CHANGE ONCE ANIMATIONS BEGIN)
+00303  088B  A9 3C                 LDA #60
+00304  088D  8D 04 D0              STA COCONUT_X_PTR
+00305  0890             
+00306  0890                        ; INITIAL COCONUT Y (TODO: CHANGE ONCE ANIMATIONS BEGIN)
+00307  0890  A9 64                 LDA #100
+00308  0892  8D 05 D0              STA COCONUT_Y_PTR
+00309  0895  60                    RTS
+00310  0896             
+00311  0896             INITIALIZE_SEAGULL_SPRITE ; SPRITE 1
+00312  0896                        ; SET THE GULL'S 10 COLOR
+00313  0896  A9 01                 LDA #WHITE
+00314  0898  8D 28 D0              STA $D028
+00315  089B             
+00316  089B                        ; TELL VIC WHERE THE FIRST GULL FRAME IS
+00317  089B  A9 BD                 LDA #SEAGULL_WINGS_DOWN
+00318  089D  8D F9 07              STA SEAGULL_DATA_PTR
+00319  08A0             
+00320  08A0                        ; INITIAL GULL X (TODO: CHANGE ONCE ANIMATIONS BEGIN)
+00321  08A0  A9 3C                 LDA #60
+00322  08A2  8D 02 D0              STA SEAGULL_X_PTR
+00323  08A5             
+00324  08A5                        ; INITIAL GULL Y (NOTE: SHOULD NEVER CHANGE)
+00325  08A5  A9 32                 LDA #50
+00326  08A7  8D 03 D0              STA SEAGULL_Y_PTR
+00327  08AA  60                    RTS
+00328  08AB             
+00329  08AB             INITIALIZE_PIRATE_SPRITE ; SPRITE 2
+00330  08AB                        ; SET THE PIRATE'S 10 COLOR
+00331  08AB  A9 09                 LDA #BROWN
+00332  08AD  8D 27 D0              STA $D027
+00333  08B0             
+00334  08B0                        ; TELL VIC WHERE THE FIRST PIRATE FRAME IS
+00335  08B0  A9 BA                 LDA #PIRATE_STANDING
+00336  08B2  8D F8 07              STA PIRATE_DATA_PTR
+00337  08B5             
+00338  08B5                        ; INITIAL PIRATE X
+00339  08B5  A9 3C                 LDA #60
+00340  08B7  8D 00 D0              STA PIRATE_X_PTR
+00341  08BA             
+00342  08BA                        ; INITIAL PIRATE Y (NOTE: SHOULD NEVER CHANGE)
+00343  08BA  A9 BC                 LDA #188
+00344  08BC  8D 01 D0              STA PIRATE_Y_PTR
+00345  08BF  60                    RTS
+00346  08C0                        
+00347  08C0             REDIRECT_TO_CUSTOM_CHARSET 
+00348  08C0  A9 1C                 LDA #28
+00349  08C2  8D 18 D0              STA $D018
+00350  08C5  60                    RTS
+00351  08C6             
+00352  08C6             APPLY_PER_CHAR_COLORS 
+00353  08C6             
+00354  08C6             
+00355  08C6  A0 00                 LDY #0
+00356  08C8  A9 D8                 LDA #>$D800
+00357  08CA  85 C3                 STA DEST_HI
+00358  08CC  A9 00                 LDA #<$D800
+00359  08CE  85 C2                 STA DEST
+00360  08D0             
+00361  08D0             
+00362  08D0  A0 00                 LDY #0
+00363  08D2  A9 98                 LDA #>$9800
+00364  08D4  85 C1                 STA SRC_HI
+00365  08D6  A9 00                 LDA #<$9800
+00366  08D8  85 C0                 STA SRC
+00367  08DA  20 80 09              JSR MOVE_256_BYTES
+00368  08DD             
+00369  08DD             
+00370  08DD             
+00371  08DD  A0 00                 LDY #0
+00372  08DF  A9 D9                 LDA #>$D900
+00373  08E1  85 C3                 STA DEST_HI
+00374  08E3  A9 00                 LDA #<$D900
+00375  08E5  85 C2                 STA DEST
+00376  08E7             
+00377  08E7             
+00378  08E7  A0 00                 LDY #0
+00379  08E9  A9 99                 LDA #>$9900
+00380  08EB  85 C1                 STA SRC_HI
+00381  08ED  A9 00                 LDA #<$9900
+00382  08EF  85 C0                 STA SRC
+00383  08F1  20 80 09              JSR MOVE_256_BYTES
+00384  08F4             
+00385  08F4             
+00386  08F4             
+00387  08F4  A0 00                 LDY #0
+00388  08F6  A9 DA                 LDA #>$DA00
+00389  08F8  85 C3                 STA DEST_HI
+00390  08FA  A9 00                 LDA #<$DA00
+00391  08FC  85 C2                 STA DEST
+00392  08FE             
+00393  08FE             
+00394  08FE  A0 00                 LDY #0
+00395  0900  A9 9A                 LDA #>$9A00
+00396  0902  85 C1                 STA SRC_HI
+00397  0904  A9 00                 LDA #<$9A00
+00398  0906  85 C0                 STA SRC
+00399  0908  20 80 09              JSR MOVE_256_BYTES
+00400  090B             
+00401  090B             
+00402  090B             
+00403  090B  A0 00                 LDY #0
+00404  090D  A9 DB                 LDA #>$DB00
+00405  090F  85 C3                 STA DEST_HI
+00406  0911  A9 00                 LDA #<$DB00
+00407  0913  85 C2                 STA DEST
+00408  0915             
+00409  0915             
+00410  0915  A0 00                 LDY #0
+00411  0917  A9 9B                 LDA #>$9B00
+00412  0919  85 C1                 STA SRC_HI
+00413  091B  A9 00                 LDA #<$9B00
+00414  091D  85 C0                 STA SRC
+00415  091F  20 80 09              JSR MOVE_256_BYTES
+00416  0922             
+00417  0922  60                    RTS
+00418  0923             
+00419  0923             ; COPIES _SCREEN_DATA TO THE THE SCREEN RAM AT $0400
+00420  0923             ; EVEN THOUGH SCREEN DATA IS ONLY 1000 BYTES, IT WILL COPY 1024!!!
+00421  0923             COPY_SCREEN_DATA_TO_SCREEN_RAM 
+00422  0923                        ; FIRST 256-BYTE BLOCK IS $0400-$04FF, FROM
+00423  0923             
+00424  0923             
+00425  0923  A0 00                 LDY #0
+00426  0925  A9 04                 LDA #>$0400
+00427  0927  85 C3                 STA DEST_HI
+00428  0929  A9 00                 LDA #<$0400
+00429  092B  85 C2                 STA DEST
+00430  092D             
+00431  092D             
+00432  092D  A0 00                 LDY #0
+00433  092F  A9 9C                 LDA #>SD_BLOCK_1
+00434  0931  85 C1                 STA SRC_HI
+00435  0933  A9 00                 LDA #<SD_BLOCK_1
+00436  0935  85 C0                 STA SRC
+00437  0937  20 80 09              JSR MOVE_256_BYTES
+00438  093A                        
+00439  093A                        ; SECOND 256-BYTE BLOCK IS $0500-$05FF
+00440  093A             
+00441  093A             
+00442  093A  A0 00                 LDY #0
+00443  093C  A9 05                 LDA #>$0500
+00444  093E  85 C3                 STA DEST_HI
+00445  0940  A9 00                 LDA #<$0500
+00446  0942  85 C2                 STA DEST
+00447  0944             
+00448  0944             
+00449  0944  A0 00                 LDY #0
+00450  0946  A9 9D                 LDA #>SD_BLOCK_2
+00451  0948  85 C1                 STA SRC_HI
+00452  094A  A9 00                 LDA #<SD_BLOCK_2
+00453  094C  85 C0                 STA SRC
+00454  094E  20 80 09              JSR MOVE_256_BYTES
+00455  0951             
+00456  0951                        ; THIRD 256-BYTE BLOCK IS $0600-$06FF
+00457  0951             
+00458  0951             
+00459  0951  A0 00                 LDY #0
+00460  0953  A9 06                 LDA #>$0600
+00461  0955  85 C3                 STA DEST_HI
+00462  0957  A9 00                 LDA #<$0600
+00463  0959  85 C2                 STA DEST
+00464  095B             
+00465  095B             
+00466  095B  A0 00                 LDY #0
+00467  095D  A9 9E                 LDA #>SD_BLOCK_3
+00468  095F  85 C1                 STA SRC_HI
+00469  0961  A9 00                 LDA #<SD_BLOCK_3
+00470  0963  85 C0                 STA SRC
+00471  0965  20 80 09              JSR MOVE_256_BYTES
+00472  0968             
+00473  0968                        ; FOURTH 256-BYTE BLOCK IS $0700-$07FF
+00474  0968             
+00475  0968             
+00476  0968  A0 00                 LDY #0
+00477  096A  A9 07                 LDA #>$0700
+00478  096C  85 C3                 STA DEST_HI
+00479  096E  A9 00                 LDA #<$0700
+00480  0970  85 C2                 STA DEST
+00481  0972             
+00482  0972             
+00483  0972  A0 00                 LDY #0
+00484  0974  A9 9F                 LDA #>SD_BLOCK_4
+00485  0976  85 C1                 STA SRC_HI
+00486  0978  A9 00                 LDA #<SD_BLOCK_4
+00487  097A  85 C0                 STA SRC
+00488  097C  20 80 09              JSR MOVE_256_BYTES
+00489  097F             
+00490  097F  60                    RTS
+00491  0980             
+00492  0980             ; COPIES 256 TYES FROM SRC TO DEST
+00493  0980             ; SRC: FIRST (LOW) BYTE OF ADDRESS CONTAINING THE SOURCE ADDRESS
+00494  0980             ; DEST: FIRST (LOW) BYTE OF ADDRESS CONTAINING THE DESTINATION ADDRESS
+00495  0980             ; CORRUPTS REGISTERS A AND Y
+00496  0980             MOVE_256_BYTES 
+00497  0980  A0 00                 LDY #0
+00498  0982  B1 C0      @LOOP      LDA (SRC),Y
+00499  0984  91 C2                 STA (DEST),Y
+00500  0986  C8                    INY ; NOTE THAT THIS WILL ROLLOVER TO ZERO AT "Y=256"
+00501  0987  D0 F9                 BNE @LOOP
+00502  0989  60                    RTS
+00503  098A             
+00504  098A             
+00505  098A             
+00506  098A             ; LDA WILL BE CORRUPTED
+00507  098A             ENABLE_MULTICOLOR_CHAR_MODE 
+00508  098A  AD 16 D0              LDA $D016
+00509  098D  09 10                 ORA #16
+00510  098F  8D 16 D0              STA $D016
+00511  0992  60                    RTS
+00512  0993             
+00513  0993             ; LDA WILL BE CORRUPTED
+00514  0993             SET_SHARED_SCREEN_COLORS 
+00515  0993                        ; SET THE 00 COLOR
+00516  0993  A9 00                 LDA #BLACK
+00517  0995  8D 21 D0              STA $D021
+00518  0998             
+00519  0998                        ; SET THE 01 COLOR
+00520  0998  A9 0C                 LDA #GREY2
+00521  099A  8D 22 D0              STA $D022
+00522  099D             
+00523  099D                        ; SET THE 10 COLOR
+00524  099D  A9 04                 LDA #VIOLET
+00525  099F  8D 23 D0              STA $D023
+00526  09A2             
+00527  09A2  60                    RTS
+00528  09A3             
+00529  09A3             
+00530  09A3             UPDATE_PIRATE 
+00531  09A3  A9 00                 LDA #0
+00532  09A5  85 C7                 STA X_INCR_VAL
+00533  09A7  20 B2 09              JSR DETERMINE_MOVEMENT_DISTANCE
+00534  09AA  A5 C7                 LDA X_INCR_VAL
+00535  09AC  F0 03                 BEQ @END ; RETURN IF X_INCR_VAL HASN'T CHANGED
+00536  09AE                        
+00537  09AE  20 E4 09              JSR MOVE_PIRATE
+00538  09B1                        ;JSR ANIMATE_PIRATE
+00539  09B1  60         @END       RTS
+00540  09B2             
+00541  09B2             ; POLLS KEYBOARD AND SETS X_INCR_VAL BASED ON KEY PRESSED
+00542  09B2             ; IF 'S' PRESSED -- X_INCR_VAL GETS A POSITIVE VALUE
+00543  09B2             ; IF 'A' PRESSED -- X_INCR_VAL GETS A NEGATIVE VALUE
+00544  09B2             ; DOES NOT PERFORM ANY MIN/MAX CLIPPING
+00545  09B2             PIRATE_SPEED = 5
+00546  09B2             DETERMINE_MOVEMENT_DISTANCE 
+00547  09B2  20 C5 09              JSR CHECK_FOR_S_KEY
+00548  09B5  A5 C9                 LDA INPUT_FLAGS
+00549  09B7  29 02                 AND #%00000010
+00550  09B9  F0 05                 BEQ @END
+00551  09BB                        
+00552  09BB                        ; S WAS PRESSED
+00553  09BB  A9 05                 LDA #PIRATE_SPEED
+00554  09BD  85 C7                 STA X_INCR_VAL
+00555  09BF  60                    RTS
+00556  09C0                        
+00557  09C0  A9 00      @END       LDA #0
+00558  09C2  85 C7                 STA X_INCR_VAL
+00559  09C4  60                    RTS
+00560  09C5             
+00561  09C5             ; CHECKS FOR PRESS OF THE 'S' KEY
+00562  09C5             ; INPUT: NONE
+00563  09C5             ; OUTPUT: INPUT_FLAGS = %00000010 IF 'S' PRESSED, $00 OTHERWISE
+00564  09C5             ;
+00565  09C5             ; ADAPTED FROM HTTP://C64-WIKI.COM/WIKI/KEYBOARD#ASSEMBLER
+00566  09C5             PRA        = $DC00 ; CIA#1, PORT REGISTER A
+00567  09C5             DDRA       = $DC02 ; CIA#1, DATA DIRECTION REGISTER A
+00568  09C5             PRB        = $DC01 ; CIA#1, PORT REGISTER B
+00569  09C5             DDRB       = $DC03 ; CIA#1, DATA DIRECTION REGISTER B
+00570  09C5             CHECK_FOR_S_KEY 
+00571  09C5  A9 00                 LDA #0
+00572  09C7  85 C9                 STA INPUT_FLAGS
+00573  09C9             
+00574  09C9                        ;SEI ; DEACTIVATE INTERRUPTS
+00575  09C9  A9 FF                 LDA #%11111111 ; MAKE PORT A THE OUTPUTS
+00576  09CB  8D 02 DC              STA DDRA
+00577  09CE                        
+00578  09CE  A9 00                 LDA #%00000000 ; MAKE PORT B THE INPUTS
+00579  09D0  8D 03 DC              STA DDRB
+00580  09D3             
+00581  09D3  A9 FD                 LDA #%11111101 ; TESTING COL1 OF THE KB MATRIX
+00582  09D5  8D 00 DC              STA PRA
+00583  09D8             
+00584  09D8  AD 01 DC              LDA PRB
+00585  09DB  29 20                 AND #%00100000 ; MASKING ROW 5
+00586  09DD  D0 04                 BNE @END
+00587  09DF  A9 02                 LDA #%00000010 ; SET THE BIT INDICATING 'S' WAS PRESSED
+00588  09E1  85 C9                 STA INPUT_FLAGS
+00589  09E3             
+00590  09E3             @END       ;CLI ; REACTIVATE INTERRUPTS
+00591  09E3  60                    RTS
+00592  09E4             
+00593  09E4             MOVE_PIRATE 
+00594  09E4  A5 C4                 LDA LOOP_TICK
+00595  09E6  29 00                 AND #FASTEST_SPEED
+00596  09E8  C9 00                 CMP #FASTEST_SPEED
+00597  09EA  D0 21                 BNE @END
+00598  09EC                        
+00599  09EC                        ; PERFORM THE MOVEMENT
+00600  09EC  A9 01                 LDA #%00000001 ; SET THE SPRITE_MASK
+00601  09EE  85 C6                 STA SPRITE_MASK
+00602  09F0             
+00603  09F0  AD 00 D0              LDA $D000 ; SET X_TEMP
+00604  09F3  85 C5                 STA X_TEMP
+00605  09F5             
+00606  09F5                        ; X_INCR_VAL SHOULD ALREADY BE SET
+00607  09F5             
+00608  09F5                        ; SET SPRITE_X_HI_TEMP
+00609  09F5  AD 10 D0              LDA $D010
+00610  09F8  85 C8                 STA SPRITE_X_HI_TEMP
+00611  09FA                        
+00612  09FA  20 63 08              JSR ADD_TO_X_COORDINATE
+00613  09FD             
+00614  09FD  20 0E 0A              JSR CLIP_TO_PIRATE_X_MAX
+00615  0A00  20 1F 0A              JSR CLIP_TO_PIRATE_X_MIN
+00616  0A03             
+00617  0A03  A5 C5                 LDA X_TEMP
+00618  0A05  8D 00 D0              STA $D000 ; SPRITE 0 X LOW BYTE
+00619  0A08             
+00620  0A08  A5 C8                 LDA SPRITE_X_HI_TEMP ; SET THE HI BIT
+00621  0A0A  8D 10 D0              STA $D010
+00622  0A0D             
+00623  0A0D  60         @END       RTS
+00624  0A0E             
+00625  0A0E             PIRATE_X_LOW_BYTE_MAX = 41
+00626  0A0E             CLIP_TO_PIRATE_X_MAX 
+00627  0A0E  A5 C8                 LDA SPRITE_X_HI_TEMP
+00628  0A10  29 01                 AND #%00000001
+00629  0A12  F0 0A                 BEQ @END ; NOT AT MAX IF HI BIT NOT SET
+00630  0A14             
+00631  0A14                        ; HI BIT IS SET, SEE IF LOW BYTE IS < PIRATE_X_LOW_BYTE_MAX
+00632  0A14  A5 C5                 LDA X_TEMP
+00633  0A16  C9 29                 CMP #PIRATE_X_LOW_BYTE_MAX
+00634  0A18  30 04                 BMI @END ; NEGATIVE RESULT MEANS PIRATE_X_LOW_BYTE_MAX > X_TEMP, SO DONE
+00635  0A1A             
+00636  0A1A                        ; CLIP X_TEMP TO PIRATE_X_LOW_BYTE_MAX
+00637  0A1A  A9 29                 LDA #PIRATE_X_LOW_BYTE_MAX
+00638  0A1C  85 C5                 STA X_TEMP
+00639  0A1E             
+00640  0A1E  60         @END       RTS
+00641  0A1F             
+00642  0A1F             CLIP_TO_PIRATE_X_MIN 
+00643  0A1F  60                    RTS
+00644  0A20             
+00645  0A20             ANIMATE_PIRATE 
+00646  0A20  60                    RTS
+00647  0A21             
+00648  0A21             UPDATE_SEAGULL 
+00649  0A21  20 28 0A              JSR ANIMATE_SEAGULL
+00650  0A24  20 45 0A              JSR MOVE_SEAGULL
+00651  0A27  60                    RTS
+00652  0A28             
+00653  0A28             ; SWITCHES BETWEEN SEAGULL ANIMATION FRAMES
+00654  0A28             ANIMATE_SEAGULL 
+00655  0A28                        ; SWITCH ANIMATION FRAME
+00656  0A28  A5 C4                 LDA LOOP_TICK
+00657  0A2A  29 00                 AND #FASTEST_SPEED ; AND WITH THE SPEED
+00658  0A2C  C9 00                 CMP #FASTEST_SPEED ; SEE IF THE RESULT MATCHES THE SPEED
+00659  0A2E  D0 14                 BNE @END ; SKIP ANIMATION ON NO MATCH (IT'S NOT YET TIME TO FIRE)
+00660  0A30                        
+00661  0A30                        ; PERFORM THE ANIMATION
+00662  0A30             
+00663  0A30                        ; PICK THE APPROPRIATE ANIMATION, BASED ON CONTENTS
+00664  0A30                        ; OF SEAGULL_DATA_PTR
+00665  0A30  AD F9 07              LDA SEAGULL_DATA_PTR
+00666  0A33  C9 BC                 CMP #SEAGULL_WINGS_UP
+00667  0A35  F0 08                 BEQ @CHOOSE_WINGS_DOWN
+00668  0A37             @CHOOSE_WINGS_UP 
+00669  0A37  A9 BC                 LDA #SEAGULL_WINGS_UP
+00670  0A39  8D F9 07              STA SEAGULL_DATA_PTR
+00671  0A3C  4C 44 0A              JMP @END
+00672  0A3F             
+00673  0A3F             @CHOOSE_WINGS_DOWN 
+00674  0A3F  A9 BD                 LDA #SEAGULL_WINGS_DOWN
+00675  0A41  8D F9 07              STA SEAGULL_DATA_PTR
+00676  0A44  60         @END       RTS
+00677  0A45             
+00678  0A45             ; ADVANCES THE SEAGULL TO THE RIGHT, WRAPPING AROUND TO ZERO APPROPRIATELY
+00679  0A45             MOVE_SEAGULL 
+00680  0A45  A5 C4                 LDA LOOP_TICK
+00681  0A47  29 00                 AND #FASTEST_SPEED
+00682  0A49  C9 00                 CMP #FASTEST_SPEED
+00683  0A4B  D0 1F                 BNE @END
+00684  0A4D                        
+00685  0A4D                        ; PERFORM THE MOVEMENT
+00686  0A4D  A9 02                 LDA #%00000010 ; SET THE SPRITE MASK
+00687  0A4F  85 C6                 STA SPRITE_MASK
+00688  0A51             
+00689  0A51  AD 02 D0              LDA SEAGULL_X_PTR ; SET THE SEAGULL X LOW BYTE
+00690  0A54  85 C5                 STA X_TEMP
+00691  0A56             
+00692  0A56  A9 01                 LDA #1 ; SET THE INCREMENT VALUE
+00693  0A58  85 C7                 STA X_INCR_VAL
+00694  0A5A             
+00695  0A5A  AD 10 D0              LDA $D010 ; COPY $D010 INTO SPRITE_X_HI_TEMP
+00696  0A5D  85 C8                 STA SPRITE_X_HI_TEMP
+00697  0A5F             
+00698  0A5F  20 63 08              JSR ADD_TO_X_COORDINATE
+00699  0A62             
+00700  0A62  A5 C5                 LDA X_TEMP ; COPY X_TEMP BACK INTO SEAGULL_X_PTR
+00701  0A64  8D 02 D0              STA SEAGULL_X_PTR
+00702  0A67             
+00703  0A67  A5 C8                 LDA SPRITE_X_HI_TEMP
+00704  0A69  8D 10 D0              STA $D010
+00705  0A6C             
+00706  0A6C                        ; NOT GONNA CHECK FOR X-AXIS WRAPPING; RIGHT NOW WILL WRAP
+00707  0A6C                        ; AT X=512, GIVING A LITTLE BIT OF RESPITE FOR PLAYER BEFORE
+00708  0A6C                        ; THE NEXT PASS. ALSO I'M LAZY.
+00709  0A6C  60         @END       RTS
+00710  0A6D             
+00711  0A6D             *=$2E80
+00712  2E80             ; PIRATE_STANDING
+00713  2E80             _PIRATE_STANDING 
+00714  2E80  0A 80 00              BYTE $0A,$80,$00
+00715  2E83  2A A0 00              BYTE $2A,$A0,$00
+00716  2E86  2A A0 00              BYTE $2A,$A0,$00
+00717  2E89  AA A0 00              BYTE $AA,$A0,$00
+00718  2E8C  87 50 00              BYTE $87,$50,$00
+00719  2E8F  85 50 00              BYTE $85,$50,$00
+00720  2E92  05 40 00              BYTE $05,$40,$00
+00721  2E95  0F C0 00              BYTE $0F,$C0,$00
+00722  2E98  2F E0 00              BYTE $2F,$E0,$00
+00723  2E9B  AF E8 00              BYTE $AF,$E8,$00
+00724  2E9E  97 E8 00              BYTE $97,$E8,$00
+00725  2EA1  A5 E8 00              BYTE $A5,$E8,$00
+00726  2EA4  AA 6A 00              BYTE $AA,$6A,$00
+00727  2EA7  AA 9A 00              BYTE $AA,$9A,$00
+00728  2EAA  3F D6 00              BYTE $3F,$D6,$00
+00729  2EAD  3F F5 00              BYTE $3F,$F5,$00
+00730  2EB0  0F C1 40              BYTE $0F,$C1,$40
+00731  2EB3  2B A0 50              BYTE $2B,$A0,$50
+00732  2EB6  28 A0 D7              BYTE $28,$A0,$D7
+00733  2EB9  A8 A0 D7              BYTE $A8,$A0,$D7
+00734  2EBC  A8 A3 55              BYTE $A8,$A3,$55
+00735  2EBF  00                    BYTE $00
+00736  2EC0             
+00737  2EC0             ; PIRATE_RUNNING
+00738  2EC0             _PIRATE_RUNNING 
+00739  2EC0  00 A8 00              BYTE $00,$A8,$00
+00740  2EC3  02 AA 00              BYTE $02,$AA,$00
+00741  2EC6  02 AA 00              BYTE $02,$AA,$00
+00742  2EC9  0A AA 00              BYTE $0A,$AA,$00
+00743  2ECC  08 75 00              BYTE $08,$75,$00
+00744  2ECF  08 55 00              BYTE $08,$55,$00
+00745  2ED2  00 54 00              BYTE $00,$54,$00
+00746  2ED5  01 FC 00              BYTE $01,$FC,$00
+00747  2ED8  01 FA 00              BYTE $01,$FA,$00
+00748  2EDB  09 7A 00              BYTE $09,$7A,$00
+00749  2EDE  0A AE 00              BYTE $0A,$AE,$00
+00750  2EE1  0A A6 00              BYTE $0A,$A6,$00
+00751  2EE4  03 D6 00              BYTE $03,$D6,$00
+00752  2EE7  03 F6 80              BYTE $03,$F6,$80
+00753  2EEA  03 F6 80              BYTE $03,$F6,$80
+00754  2EED  03 FD C0              BYTE $03,$FD,$C0
+00755  2EF0  0A FD 40              BYTE $0A,$FD,$40
+00756  2EF3  2A 3A 40              BYTE $2A,$3A,$40
+00757  2EF6  28 0A 40              BYTE $28,$0A,$40
+00758  2EF9  28 02 50              BYTE $28,$02,$50
+00759  2EFC  28 0D 54              BYTE $28,$0D,$54
+00760  2EFF  00                    BYTE $00
+00761  2F00             
+00762  2F00             ; SEAGULL_WINGS_UP
+00763  2F00             _SEAGULL_WINGS_UP 
+00764  2F00  00 00 00              BYTE $00,$00,$00
+00765  2F03  00 50 00              BYTE $00,$50,$00
+00766  2F06  01 54 00              BYTE $01,$54,$00
+00767  2F09  05 55 00              BYTE $05,$55,$00
+00768  2F0C  15 05 00              BYTE $15,$05,$00
+00769  2F0F  00 05 40              BYTE $00,$05,$40
+00770  2F12  00 15 04              BYTE $00,$15,$04
+00771  2F15  01 55 55              BYTE $01,$55,$55
+00772  2F18  55 55 54              BYTE $55,$55,$54
+00773  2F1B  05 55 50              BYTE $05,$55,$50
+00774  2F1E  01 55 00              BYTE $01,$55,$00
+00775  2F21  05 40 00              BYTE $05,$40,$00
+00776  2F24  04 00 00              BYTE $04,$00,$00
+00777  2F27  00 00 00              BYTE $00,$00,$00
+00778  2F2A  00 00 00              BYTE $00,$00,$00
+00779  2F2D  00 00 00              BYTE $00,$00,$00
+00780  2F30  00 00 00              BYTE $00,$00,$00
+00781  2F33  00 00 00              BYTE $00,$00,$00
+00782  2F36  00 00 00              BYTE $00,$00,$00
+00783  2F39  00 00 00              BYTE $00,$00,$00
+00784  2F3C  00 00 00              BYTE $00,$00,$00
+00785  2F3F  00                    BYTE $00
+00786  2F40             
+00787  2F40             ; SEAGULL_WINGS_DOWN
+00788  2F40             _SEAGULL_WINGS_DOWN 
+00789  2F40  00 00 00              BYTE $00,$00,$00
+00790  2F43  00 00 00              BYTE $00,$00,$00
+00791  2F46  00 00 00              BYTE $00,$00,$00
+00792  2F49  00 00 00              BYTE $00,$00,$00
+00793  2F4C  00 00 00              BYTE $00,$00,$00
+00794  2F4F  00 00 04              BYTE $00,$00,$04
+00795  2F52  00 00 05              BYTE $00,$00,$05
+00796  2F55  01 55 54              BYTE $01,$55,$54
+00797  2F58  55 55 54              BYTE $55,$55,$54
+00798  2F5B  05 55 50              BYTE $05,$55,$50
+00799  2F5E  01 55 00              BYTE $01,$55,$00
+00800  2F61  01 54 00              BYTE $01,$54,$00
+00801  2F64  00 50 00              BYTE $00,$50,$00
+00802  2F67  01 40 00              BYTE $01,$40,$00
+00803  2F6A  05 00 00              BYTE $05,$00,$00
+00804  2F6D  00 00 00              BYTE $00,$00,$00
+00805  2F70  00 00 00              BYTE $00,$00,$00
+00806  2F73  00 00 00              BYTE $00,$00,$00
+00807  2F76  00 00 00              BYTE $00,$00,$00
+00808  2F79  00 00 00              BYTE $00,$00,$00
+00809  2F7C  00 00 00              BYTE $00,$00,$00
+00810  2F7F  00                    BYTE $00
+00811  2F80             
+00812  2F80             ; COCONUT_HORZ
+00813  2F80             _COCONUT_HORZ 
+00814  2F80  00 00 00              BYTE $00,$00,$00
+00815  2F83  00 00 00              BYTE $00,$00,$00
+00816  2F86  00 00 00              BYTE $00,$00,$00
+00817  2F89  00 00 00              BYTE $00,$00,$00
+00818  2F8C  00 00 00              BYTE $00,$00,$00
+00819  2F8F  00 00 00              BYTE $00,$00,$00
+00820  2F92  00 00 00              BYTE $00,$00,$00
+00821  2F95  00 00 00              BYTE $00,$00,$00
+00822  2F98  00 00 00              BYTE $00,$00,$00
+00823  2F9B  00 00 00              BYTE $00,$00,$00
+00824  2F9E  00 00 00              BYTE $00,$00,$00
+00825  2FA1  00 00 00              BYTE $00,$00,$00
+00826  2FA4  00 00 00              BYTE $00,$00,$00
+00827  2FA7  00 00 00              BYTE $00,$00,$00
+00828  2FAA  00 00 00              BYTE $00,$00,$00
+00829  2FAD  00 2A 00              BYTE $00,$2A,$00
+00830  2FB0  00 AA 80              BYTE $00,$AA,$80
+00831  2FB3  00 AA 80              BYTE $00,$AA,$80
+00832  2FB6  00 AA 80              BYTE $00,$AA,$80
+00833  2FB9  00 2A 00              BYTE $00,$2A,$00
+00834  2FBC  00 00 00              BYTE $00,$00,$00
+00835  2FBF  00                    BYTE $00
+00836  2FC0             
+00837  2FC0             ; COCONUT_VERT
+00838  2FC0             _COCONUT_VERT 
+00839  2FC0  00 00 00              BYTE $00,$00,$00
+00840  2FC3  00 00 00              BYTE $00,$00,$00
+00841  2FC6  00 00 00              BYTE $00,$00,$00
+00842  2FC9  00 00 00              BYTE $00,$00,$00
+00843  2FCC  00 00 00              BYTE $00,$00,$00
+00844  2FCF  00 00 00              BYTE $00,$00,$00
+00845  2FD2  00 00 00              BYTE $00,$00,$00
+00846  2FD5  00 00 00              BYTE $00,$00,$00
+00847  2FD8  00 00 00              BYTE $00,$00,$00
+00848  2FDB  00 00 00              BYTE $00,$00,$00
+00849  2FDE  00 00 00              BYTE $00,$00,$00
+00850  2FE1  00 00 00              BYTE $00,$00,$00
+00851  2FE4  00 00 00              BYTE $00,$00,$00
+00852  2FE7  00 00 00              BYTE $00,$00,$00
+00853  2FEA  00 08 00              BYTE $00,$08,$00
+00854  2FED  00 2A 00              BYTE $00,$2A,$00
+00855  2FF0  00 2A 00              BYTE $00,$2A,$00
+00856  2FF3  00 2A 00              BYTE $00,$2A,$00
+00857  2FF6  00 2A 00              BYTE $00,$2A,$00
+00858  2FF9  00 2A 00              BYTE $00,$2A,$00
+00859  2FFC  00 08 00              BYTE $00,$08,$00
+00860  2FFF  00                    BYTE $00
+00861  3000             
+00862  3000             
+00863  3000             *=$3000
+00864  3000             CHARDATA
+00865  3000  AA FF 5F              BYTE    $AA,$FF,$5F,$FF,$FF,$F7,$FF,$AA ; CHARACTER 0
+00866  3008  AA FF FF              BYTE    $AA,$FF,$FF,$DF,$FF,$FD,$7F,$AA ; CHARACTER 1
+00867  3010  AA FE FE              BYTE    $AA,$FE,$FE,$7E,$FE,$FE,$F6,$AA ; CHARACTER 2
+00868  3018  AA BF BF              BYTE    $AA,$BF,$BF,$BD,$BF,$BF,$9F,$AA ; CHARACTER 3
+00869  3020  96 96 96              BYTE    $96,$96,$96,$96,$96,$96,$96,$96 ; CHARACTER 4
+00870  3028  FF FF FF              BYTE    $FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF ; CHARACTER 5
+00871  3030  03 03 0F              BYTE    $03,$03,$0F,$0F,$3F,$3F,$FF,$FF ; CHARACTER 6
+00872  3038  0F 0F 0F              BYTE    $0F,$0F,$0F,$0F,$0F,$0F,$0F,$0F ; CHARACTER 7
+00873  3040  03 03 03              BYTE    $03,$03,$03,$03,$0F,$0F,$0F,$0F ; CHARACTER 8
+00874  3048  0F 0F 0F              BYTE    $0F,$0F,$0F,$0F,$03,$03,$03,$03 ; CHARACTER 9
+00875  3050  FF FF 3F              BYTE    $FF,$FF,$3F,$3F,$0F,$0F,$03,$03 ; CHARACTER 10
+00876  3058  3F 3F 3F              BYTE    $3F,$3F,$3F,$3F,$3F,$3F,$3F,$3F ; CHARACTER 11
+00877  3060  F0 F0 C0              BYTE    $F0,$F0,$C0,$C0,$C0,$00,$00,$00 ; CHARACTER 12
+00878  3068  0F 0F 03              BYTE    $0F,$0F,$03,$03,$03,$00,$00,$00 ; CHARACTER 13
+00879  3070  00 00 00              BYTE    $00,$00,$00,$C0,$C0,$C0,$F0,$F0 ; CHARACTER 14
+00880  3078  00 00 00              BYTE    $00,$00,$00,$03,$03,$03,$0F,$0F ; CHARACTER 15
+00881  3080  00 10 74              BYTE    $00,$10,$74,$10,$00,$00,$00,$00 ; CHARACTER 16
+00882  3088             
+00883  3088             ; SCREEN 1 -  SCREEN DATA; VIC BANK 3
+00884  3088             *=$9C00
+00885  9C00             ; SCREEN 1 -  SCREEN DATA
+00886  9C00             _SCREEN_DATA 
+00887  9C00  20 20 20              BYTE    $20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$10,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20
+00888  9C28  20 10 20              BYTE    $20,$10,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$10,$20
+00889  9C50  20 20 20              BYTE    $20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$10,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$10,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20
+00890  9C78  20 20 20              BYTE    $20,$20,$20,$20,$20,$20,$10,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20
+00891  9CA0  20 20 20              BYTE    $20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$10,$20,$20,$20,$20,$20,$20,$20
+00892  9CC8  20 20 20              BYTE    $20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$10,$20
+00893  9CF0  20 20 20              BYTE    $20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$10,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20
+00894  9D18  20 20 20              BYTE    $20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$10,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20
+00895  9D40  20 20 20              BYTE    $20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$10,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20
+00896  9D68  20 20 20              BYTE    $20,$20,$20,$10,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20
+00897  9D90  20 20 20              BYTE    $20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$10,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$03,$01,$20
+00898  9DB8  20 20 10              BYTE    $20,$20,$10,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$10,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$03,$01,$20
+00899  9DE0  20 20 20              BYTE    $20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$10,$20,$20,$20,$03,$01,$20
+00900  9E08  00 00 02              BYTE    $00,$00,$02,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$03,$01,$20
+00901  9E30  00 00 02              BYTE    $00,$00,$02,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$03,$01,$20
+00902  9E58  00 00 02              BYTE    $00,$00,$02,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$03,$01,$20
+00903  9E80  00 00 02              BYTE    $00,$00,$02,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$03,$01,$20
+00904  9EA8  00 00 02              BYTE    $00,$00,$02,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$03,$01,$20
+00905  9ED0  00 00 02              BYTE    $00,$00,$02,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$03,$01,$20
+00906  9EF8  00 00 02              BYTE    $00,$00,$02,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$03,$01,$20
+00907  9F20  00 02 00              BYTE    $00,$02,$00,$00,$00,$00,$00,$02,$00,$00,$01,$01,$00,$00,$02,$03,$00,$00,$00,$00,$03,$01,$03,$03,$00,$00,$01,$00,$00,$00,$00,$00,$01,$01,$00,$00,$00,$00,$00,$20
+00908  9F48  01 01 00              BYTE    $01,$01,$00,$02,$00,$03,$00,$00,$00,$0C,$0D,$01,$01,$0C,$0D,$01,$01,$0C,$0D,$01,$01,$01,$00,$00,$01,$00,$0C,$0D,$01,$01,$0C,$0D,$01,$01,$0C,$0D,$01,$00,$00,$20
+00909  9F70  00 01 01              BYTE    $00,$01,$01,$01,$01,$01,$01,$01,$01,$0E,$0F,$01,$01,$0E,$0F,$00,$00,$0E,$0F,$00,$01,$00,$00,$01,$01,$00,$0E,$0F,$01,$01,$0E,$0F,$00,$00,$0E,$0F,$01,$00,$00,$20
+00910  9F98  00 02 02              BYTE    $00,$02,$02,$00,$01,$01,$03,$00,$00,$00,$00,$00,$00,$00,$00,$03,$00,$00,$00,$01,$02,$01,$01,$01,$00,$01,$01,$00,$00,$03,$01,$00,$02,$00,$00,$00,$00,$02,$00,$20
+00911  9FC0  20 20 20              BYTE    $20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20,$20
+00912  9FE8             
+00913  9FE8             *=$9800
+00914  9800             ; SCREEN 1 -  COLOUR DATA
+00915  9800             _COLOUR_DATA 
+00916  9800  00 00 00              BYTE    $00,$00,$00,$00,$00,$00,$00,$00,$0D,$0D,$0D,$0D,$0D,$0D,$0D,$0D,$0D,$0D,$0D,$00,$00,$00,$0A,$0D,$0E,$0E,$0E,$0E,$0E,$0E,$0E,$0E,$0E,$00,$00,$00,$00,$00,$00,$00
+00917  9828  00 0D 00              BYTE    $00,$0D,$00,$00,$00,$00,$00,$0D,$0E,$0E,$0E,$0E,$0E,$0E,$0E,$0E,$0E,$0E,$0A,$00,$00,$00,$0D,$0D,$0D,$0D,$0D,$0D,$0D,$0D,$0D,$0D,$0A,$00,$00,$00,$00,$00,$0D,$00
+00918  9850  00 00 0D              BYTE    $00,$00,$0D,$00,$00,$00,$00,$0D,$0D,$0D,$0D,$0D,$0D,$0D,$0D,$0D,$0D,$0A,$0A,$00,$00,$00,$0D,$0E,$0E,$0E,$0E,$0D,$0D,$0E,$0E,$0A,$0A,$00,$00,$00,$00,$00,$00,$00
+00919  9878  00 00 00              BYTE    $00,$00,$00,$00,$00,$00,$0D,$0D,$0E,$0E,$0E,$0E,$0E,$0E,$0E,$0E,$0E,$0A,$0A,$00,$00,$00,$0D,$0D,$0D,$0D,$0D,$0D,$0D,$0D,$0D,$0A,$0A,$00,$00,$00,$00,$00,$00,$00
+00920  98A0  00 0A 00              BYTE    $00,$0A,$00,$00,$00,$00,$00,$0D,$0D,$0D,$0D,$0D,$0D,$0D,$0D,$0D,$0D,$0A,$0A,$00,$00,$00,$0D,$0E,$0E,$0E,$0E,$0E,$0E,$0E,$0E,$0A,$0D,$00,$00,$00,$00,$00,$00,$00
+00921  98C8  00 00 00              BYTE    $00,$00,$00,$00,$00,$00,$00,$0D,$0E,$0E,$0E,$0E,$0E,$0E,$0E,$0E,$0E,$0E,$0A,$00,$00,$00,$0D,$0D,$0D,$0D,$0D,$0D,$0D,$0D,$0D,$0D,$0A,$00,$00,$00,$00,$00,$0D,$00
+00922  98F0  00 00 00              BYTE    $00,$00,$00,$00,$00,$00,$00,$00,$0D,$0D,$0D,$0D,$0D,$0D,$0D,$0D,$0D,$0D,$0D,$00,$00,$00,$0A,$0D,$0E,$0E,$0E,$0D,$0E,$0E,$0E,$0E,$0E,$00,$00,$00,$00,$00,$00,$00
+00923  9918  00 00 00              BYTE    $00,$00,$00,$00,$00,$00,$00,$00,$00,$0D,$0E,$0E,$0E,$0E,$0E,$0E,$0E,$0E,$0E,$0D,$00,$00,$00,$00,$0D,$0D,$0D,$0D,$0D,$0D,$0D,$0D,$0D,$0D,$0D,$00,$00,$00,$00,$00
+00924  9940  00 00 00              BYTE    $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$0D,$00,$00,$0A,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$0A,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
+00925  9968  0A 0A 0A              BYTE    $0A,$0A,$0A,$0D,$0A,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$0A,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$0A,$0A,$0A,$0A,$0A,$0A,$0A,$09,$09,$09,$09,$09
+00926  9990  0A 0A 0A              BYTE    $0A,$0A,$0A,$0A,$0A,$0A,$0A,$00,$00,$00,$0D,$00,$00,$00,$00,$0A,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$0A,$0A,$0A,$0A,$0A,$0A,$0A,$09,$09,$09,$09,$09
+00927  99B8  0A 0A 0D              BYTE    $0A,$0A,$0D,$0A,$0A,$0A,$0A,$0A,$00,$00,$00,$00,$00,$00,$00,$0A,$0D,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$0A,$0A,$0A,$0A,$0A,$0A,$00,$09,$09,$09,$09,$09
+00928  99E0  0A 0A 0A              BYTE    $0A,$0A,$0A,$0A,$0A,$0A,$0A,$0A,$0A,$0A,$00,$00,$00,$00,$00,$0A,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$0A,$0A,$0A,$09,$09,$0D,$09,$09,$09,$09,$09,$09
+00929  9A08  09 09 09              BYTE    $09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$0A,$0A,$0A,$0A,$0A,$0A,$0D,$0A,$0A,$0A,$0A,$0A,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09
+00930  9A30  09 09 09              BYTE    $09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09
+00931  9A58  09 09 09              BYTE    $09,$09,$09,$00,$00,$00,$09,$0D,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$00,$09,$09,$09
+00932  9A80  09 09 09              BYTE    $09,$09,$09,$00,$00,$00,$00,$00,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$0D,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$00,$09,$09,$09
+00933  9AA8  09 09 09              BYTE    $09,$09,$09,$00,$00,$00,$00,$00,$00,$0A,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$00,$09,$09,$09
+00934  9AD0  09 09 09              BYTE    $09,$09,$09,$00,$00,$00,$00,$00,$00,$0A,$0A,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$0D,$09,$09,$09,$09,$09,$09,$09,$09,$00,$00,$09,$09,$09
+00935  9AF8  09 09 09              BYTE    $09,$09,$09,$00,$00,$00,$00,$00,$0D,$0A,$09,$0A,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$00,$00,$09,$09,$09
+00936  9B20  09 09 09              BYTE    $09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09
+00937  9B48  09 09 09              BYTE    $09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09
+00938  9B70  09 09 09              BYTE    $09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09
+00939  9B98  09 09 09              BYTE    $09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09
+00940  9BC0  09 09 09              BYTE    $09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09,$09
+00941  9BE8             
 
-******* 30 Label(s) *******
+******* 32 Label(s) *******
 _coconut_horz = $2F80 
 _coconut_vert = $2FC0 
 _colour_data = $9800 
@@ -923,33 +949,35 @@ _pirate_standing = $2E80
 _screen_data = $9C00 
 _seagull_wings_down = $2F40 
 _seagull_wings_up = $2F00 
-ADD_TO_X_COORDINATE = $086F 
-ANIMATE_PIRATE = $0A2E 
-ANIMATE_SEAGULL = $0A36 
-APPLY_PER_CHAR_COLORS = $08D4 
+ADD_TO_X_COORDINATE = $0863 
+ANIMATE_PIRATE = $0A20 
+ANIMATE_SEAGULL = $0A28 
+APPLY_PER_CHAR_COLORS = $08C6 
 CHARDATA = $3000 
-CHECK_FOR_S_KEY = $09ED 
-COPY_SCREEN_DATA_TO_SCREEN_RAM = $0931 
-DETERMINE_MOVEMENT_DISTANCE = $09BF 
-ENABLE_MULTICOLOR_CHAR_MODE = $0998 
-init_raster_interrupt = $0840 
-INITIALIZE_COCONUT_SPRITE = $088F 
-INITIALIZE_PIRATE_SPRITE = $08B9 
-INITIALIZE_SEAGULL_SPRITE = $08A4 
-main_game_loop = $0860 
-MOVE_256_BYTES = $098E 
-MOVE_PIRATE = $0A0E 
-MOVE_SEAGULL = $0A53 
+CHECK_FOR_S_KEY = $09C5 
+CLIP_TO_PIRATE_X_MAX = $0A0E 
+CLIP_TO_PIRATE_X_MIN = $0A1F 
+COPY_SCREEN_DATA_TO_SCREEN_RAM = $0923 
+DETERMINE_MOVEMENT_DISTANCE = $09B2 
+ENABLE_MULTICOLOR_CHAR_MODE = $098A 
+init_raster_interrupt = $0831 
+INITIALIZE_COCONUT_SPRITE = $0881 
+INITIALIZE_PIRATE_SPRITE = $08AB 
+INITIALIZE_SEAGULL_SPRITE = $0896 
+main_game_loop = $0851 
+MOVE_256_BYTES = $0980 
+MOVE_PIRATE = $09E4 
+MOVE_SEAGULL = $0A45 
 PROGRAM_START = $0810 
-REDIRECT_TO_CUSTOM_CHARSET = $08CE 
-SET_SHARED_SCREEN_COLORS = $09A1 
-UPDATE_PIRATE = $09B1 
-UPDATE_SEAGULL = $0A2F 
+REDIRECT_TO_CUSTOM_CHARSET = $08C0 
+SET_SHARED_SCREEN_COLORS = $0993 
+UPDATE_PIRATE = $09A3 
+UPDATE_SEAGULL = $0A21 
 
-******* 12 Unused label(s) *******
+******* 17 Unused label(s) *******
+@carry_result
 @choose_wings_down
 @choose_wings_up
-@clear_hi_bit
 @end
 @end
 @end
@@ -957,10 +985,8 @@ UPDATE_SEAGULL = $0A2F
 @end
 @end
 @end
+@hi_bit_zero
 @loop
-@mod_hi_bit
-@set_hi_bit
-@standard_increment
 _coconut_horz
 _coconut_vert
 _colour_data
@@ -969,12 +995,17 @@ _pirate_standing
 _screen_data
 _seagull_wings_down
 _seagull_wings_up
+ANIMATE_PIRATE
+APPLY_PER_CHAR_COLORS
 CHARDATA
+COPY_SCREEN_DATA_TO_SCREEN_RAM
+ENABLE_MULTICOLOR_CHAR_MODE
 init_raster_interrupt
 PROGRAM_START
-UPDATE_PIRATE
+REDIRECT_TO_CUSTOM_CHARSET
+SET_SHARED_SCREEN_COLORS
 
-******* 55 Variable(s) *******
+******* 56 Variable(s) *******
 1_128TH_SPEED  = $007F
 1_16TH_SPEED  = $000F
 1_32ND_SPEED  = $001F
@@ -1001,8 +1032,9 @@ INPUT_FLAGS  = $00C9
 LOOP_TICK  = $00C4
 pirate_data_ptr  = $07F8
 pirate_running  = $00BB
+pirate_speed  = $0005
 pirate_standing  = $00BA
-pirate_x_increment  = $0005
+pirate_x_low_byte_max  = $0029
 pirate_x_ptr  = $D000
 pirate_y_ptr  = $D001
 PRA  = $DC00
@@ -1030,7 +1062,7 @@ VIOLET  = $0004
 WHITE  = $0001
 X_INCR_VAL  = $00C7
 X_TEMP  = $00C5
-******* 7 Unused variables(s) *******
+******* 9 Unused variables(s) *******
 1_128TH_SPEED
 1_16TH_SPEED
 1_32ND_SPEED
