@@ -519,9 +519,14 @@ MOVE_PIRATE
         lda $D010
         sta SPRITE_X_HI_TEMP
         
-        jsr ADD_TO_X_COORDINATE
+        lda X_INCR_VAL
+        bmi @end ; change to @move_left once moving left stuff in place
 
+@move_right
+        jsr ADD_TO_X_COORDINATE
         jsr CLIP_TO_PIRATE_X_MAX
+
+@move_left
         ;jsr CLIP_TO_PIRATE_X_MIN
 
         lda X_TEMP
