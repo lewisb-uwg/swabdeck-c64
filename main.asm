@@ -245,13 +245,12 @@ SUBTRACT_FROM_X_COORDINATE
         ; performe the subtraction on X_TEMP
         clc
         clv
-        lda #0 ; clear N flag
         lda X_TEMP
         sbc X_INCR_VAL
         sta X_TEMP
 
         ; if no negative generated, we're done
-        bpl @end
+        bvc @end
 
 @negative_result
         ; if hi bit not set, clip to 0
