@@ -227,7 +227,54 @@ main_game_loop
         ; jump into the KERNAL's normal interrupt service routine
         jmp $EA31
 
-; moves a sprite by incrementing its x-coordinate. DOES NOT WRAP!
+; Will clip to x=0 automatically.
+;
+; inputs:
+; X_TEMP: contains the X-value we're decrementing
+; X_INCR_VAL: the amount to decrement x, between 0 and 127 (8-bit limit)
+; SPRITE_MASK: bit set for the sprite getting incremented
+; SPRITE_X_HI_TEMP: byte to hold the high bit ($D010-style) of the
+;                   sprite's x-coordinat. Initialize with $D010
+; outputs:
+; X_TEMP: is the new low byte of the caller's x-position
+; SPRITE_X_HI_TEMP: appropriate sprite hi bit is set/unset as needed. It
+;                   guarantees to preserve other sprites' hi bits, so it can
+;                   be copied directly back to $D010 if needed.
+SUBTRACT_FROM_X_COORDINATE
+        ; performe the subtraction on X_TEMP
+        clc
+        clv
+        lda #0 ; clear N flag
+        lda X_TEMP
+        sbc X_INCR_VAL
+
+        ; if no negative generated, we're done
+        bpl @end
+
+@negative_result
+        ; if hi bit not set, clip to 0
+        lda SPRITE_X_HI_TEMP
+        and SPRITE_MASK
+        beq @handle_hi_bit
+
+        ; clip to zero
+        lda #0 
+        sta X_TEMP
+        jmp @end
+
+@handle_hi_bit
+        ; set hi bit to zero
+        lda SPRITE_MASK
+        invert_acc
+        and SPRITE_X_HI_TEMP
+        sta SPRITE_X_HI_TEMP
+
+        ; i think that's it? shouldn't X_TEMP be the same?
+
+@end
+        rts
+        
+        
 
 ; inputs:
 ; X_TEMP: contains the X-value we're incrementing
@@ -520,14 +567,15 @@ MOVE_PIRATE
         sta SPRITE_X_HI_TEMP
         
         lda X_INCR_VAL
-        bmi @end ; change to @move_left once moving left stuff in place
+        bmi @move_left ; change to @move_left once moving left stuff in place
 
 @move_right
         jsr ADD_TO_X_COORDINATE
         jsr CLIP_TO_PIRATE_X_MAX
 
 @move_left
-        ;jsr CLIP_TO_PIRATE_X_MIN
+        jsr SUBTRACT_FROM_X_COORDINATE
+        jsr CLIP_TO_PIRATE_X_MIN
 
         lda X_TEMP
         sta $D000 ; sprite 0 x low byte
