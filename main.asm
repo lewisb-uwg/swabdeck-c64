@@ -247,6 +247,7 @@ SUBTRACT_FROM_X_COORDINATE
         lda #0 ; clear N flag
         lda X_TEMP
         sbc X_INCR_VAL
+        sta X_TEMP
 
         ; if no negative generated, we're done
         bpl @end
@@ -255,7 +256,7 @@ SUBTRACT_FROM_X_COORDINATE
         ; if hi bit not set, clip to 0
         lda SPRITE_X_HI_TEMP
         and SPRITE_MASK
-        beq @handle_hi_bit
+        bne @handle_hi_bit
 
         ; clip to zero
         lda #0 
@@ -272,6 +273,7 @@ SUBTRACT_FROM_X_COORDINATE
         ; i think that's it? shouldn't X_TEMP be the same?
 
 @end
+        
         rts
         
         
@@ -461,47 +463,15 @@ SET_SHARED_SCREEN_COLORS
 
 
 UPDATE_PIRATE
-        lda #0
-        sta X_INCR_VAL
-        jsr DETERMINE_MOVEMENT_DISTANCE
-        lda X_INCR_VAL
-        beq @end ; return if X_INCR_VAL hasn't changed
+        jsr CHECK_FOR_DIRECTIONAL_KEYS
+        lda INPUT_FLAGS
+        beq @end ; return if no INPUT_FLAGS
         
         jsr MOVE_PIRATE
         ;jsr ANIMATE_PIRATE
 @end    rts
 
-; Polls keyboard and sets X_INCR_VAL based on key pressed
-; if 'S' pressed -- X_INCR_VAL gets a positive value
-; if 'A' pressed -- X_INCR_VAL gets a negative value
-; does NOT perform any min/max clipping
-pirate_speed = 1
-DETERMINE_MOVEMENT_DISTANCE
-        jsr CHECK_FOR_DIRECTIONAL_KEYS
-        lda INPUT_FLAGS
-        and #%00000010
-        beq @check_for_a
-        
-        ; S was pressed
-        lda #pirate_speed
-        sta X_INCR_VAL
-        rts
 
-@check_for_a
-        lda INPUT_FLAGS
-        and #%00000001
-        beq @end
-
-        ; A was pressed
-        lda #0
-        clc
-        sbc #pirate_speed
-        sta X_INCR_VAL
-        rts
-
-@end    lda #0
-        sta X_INCR_VAL
-        rts
 
 ; Checks for press of the 'S' key
 ; input: none
@@ -531,8 +501,10 @@ CHECK_FOR_DIRECTIONAL_KEYS
         lda PRB
         and #%00100000 ; masking row 5
         bne @check_for_A
+
         lda #%00000010 ; set the bit indicating 'S' was pressed
         sta INPUT_FLAGS
+        jmp @end
 
 @check_for_A
         lda #%11111101 ; test col1 of the kb matrix
@@ -541,6 +513,7 @@ CHECK_FOR_DIRECTIONAL_KEYS
         lda PRB
         and #%00000100 ; masking row 2
         bne @end
+
         lda #%00000001 ; set the bit indicating 'A' was pressed
         sta INPUT_FLAGS
 
@@ -560,23 +533,28 @@ MOVE_PIRATE
         lda $D000 ; set X_TEMP
         sta X_TEMP
 
-        ; X_INCR_VAL should already be set
+        lda #1 ; SET X_INCR_VAL
+        sta X_INCR_VAL
 
         ; set SPRITE_X_HI_TEMP  
         lda $D010
         sta SPRITE_X_HI_TEMP
         
-        lda X_INCR_VAL
-        bmi @move_left ; change to @move_left once moving left stuff in place
+        lda INPUT_FLAGS
+        beq @end
+        cmp #%00000001
+        beq @move_left
 
 @move_right
         jsr ADD_TO_X_COORDINATE
         jsr CLIP_TO_PIRATE_X_MAX
+        jmp @finalize
 
 @move_left
         jsr SUBTRACT_FROM_X_COORDINATE
         jsr CLIP_TO_PIRATE_X_MIN
 
+@finalize
         lda X_TEMP
         sta $D000 ; sprite 0 x low byte
 

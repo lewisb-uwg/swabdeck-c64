@@ -1,5 +1,5 @@
 
-******* 33 Label(s) *******
+******* 32 Label(s) *******
 _coconut_horz = $2F80 
 _coconut_vert = $2FC0 
 _colour_data = $9800 
@@ -8,35 +8,33 @@ _pirate_standing = $2E80
 _screen_data = $9C00 
 _seagull_wings_down = $2F40 
 _seagull_wings_up = $2F00 
-ADD_TO_X_COORDINATE = $0884 
-ANIMATE_PIRATE = $0A68 
-ANIMATE_SEAGULL = $0A70 
-APPLY_PER_CHAR_COLORS = $08E9 
+ADD_TO_X_COORDINATE = $0886 
+ANIMATE_PIRATE = $0A53 
+ANIMATE_SEAGULL = $0A5B 
+APPLY_PER_CHAR_COLORS = $08EB 
 CHARDATA = $3000 
-CHECK_FOR_DIRECTIONAL_KEYS = $09F6 
-CLIP_TO_PIRATE_X_MAX = $0A56 
-CLIP_TO_PIRATE_X_MIN = $0A67 
-COPY_SCREEN_DATA_TO_SCREEN_RAM = $0946 
-DETERMINE_MOVEMENT_DISTANCE = $09D5 
-ENABLE_MULTICOLOR_CHAR_MODE = $09AD 
+CHECK_FOR_DIRECTIONAL_KEYS = $09D3 
+CLIP_TO_PIRATE_X_MAX = $0A41 
+CLIP_TO_PIRATE_X_MIN = $0A52 
+COPY_SCREEN_DATA_TO_SCREEN_RAM = $0948 
+ENABLE_MULTICOLOR_CHAR_MODE = $09AF 
 init_raster_interrupt = $0831 
-INITIALIZE_COCONUT_SPRITE = $08A4 
-INITIALIZE_PIRATE_SPRITE = $08CE 
-INITIALIZE_SEAGULL_SPRITE = $08B9 
+INITIALIZE_COCONUT_SPRITE = $08A6 
+INITIALIZE_PIRATE_SPRITE = $08D0 
+INITIALIZE_SEAGULL_SPRITE = $08BB 
 main_game_loop = $0851 
-MOVE_256_BYTES = $09A3 
-MOVE_PIRATE = $0A25 
-MOVE_SEAGULL = $0A8D 
+MOVE_256_BYTES = $09A5 
+MOVE_PIRATE = $0A05 
+MOVE_SEAGULL = $0A78 
 PROGRAM_START = $0810 
-REDIRECT_TO_CUSTOM_CHARSET = $08E3 
-SET_SHARED_SCREEN_COLORS = $09B6 
+REDIRECT_TO_CUSTOM_CHARSET = $08E5 
+SET_SHARED_SCREEN_COLORS = $09B8 
 SUBTRACT_FROM_X_COORDINATE = $0864 
-UPDATE_PIRATE = $09C6 
-UPDATE_SEAGULL = $0A69 
+UPDATE_PIRATE = $09C8 
+UPDATE_SEAGULL = $0A54 
 
 ******* 17 Unused label(s) *******
 @carry_result
-@check_for_a
 @check_for_A
 @choose_wings_down
 @choose_wings_up
@@ -47,7 +45,7 @@ UPDATE_SEAGULL = $0A69
 @end
 @end
 @end
-@end
+@finalize
 @handle_hi_bit
 @hi_bit_zero
 @loop
@@ -72,7 +70,7 @@ PROGRAM_START
 REDIRECT_TO_CUSTOM_CHARSET
 SET_SHARED_SCREEN_COLORS
 
-******* 56 Variable(s) *******
+******* 55 Variable(s) *******
 1_128TH_SPEED  = $007F
 1_16TH_SPEED  = $000F
 1_32ND_SPEED  = $001F
@@ -99,7 +97,6 @@ INPUT_FLAGS  = $00C9
 LOOP_TICK  = $00C4
 pirate_data_ptr  = $07F8
 pirate_running  = $00BB
-pirate_speed  = $0001
 pirate_standing  = $00BA
 pirate_x_low_byte_max  = $0029
 pirate_x_ptr  = $D000
@@ -129,7 +126,7 @@ VIOLET  = $0004
 WHITE  = $0001
 X_INCR_VAL  = $00C7
 X_TEMP  = $00C5
-******* 2 Unused variables(s) *******
+******* 3 Unused variables(s) *******
 1_128TH_SPEED
 1_16TH_SPEED
 1_32ND_SPEED
