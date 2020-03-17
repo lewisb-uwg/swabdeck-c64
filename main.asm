@@ -231,7 +231,7 @@ main_game_loop
 
 ; inputs:
 ; X_TEMP: contains the X-value we're incrementing
-; X_INCR_VAL: the amount to increment x. 255 max (8-bit limit)
+; X_INCR_VAL: the amount to increment x, between 0 and 127 (8-bit limit)
 ; SPRITE_MASK: bit set for the sprite getting incremented
 ; SPRITE_X_HI_TEMP: byte to hold the high bit ($D010-style) of the
 ;                   sprite's x-coordinat. Initialize with $D010
