@@ -198,7 +198,8 @@ init_raster_interrupt
         sta $D01A
 
         ; return to BASIC
-        rts 
+        ;rts
+@loop   jmp @loop 
         
 
 main_game_loop
