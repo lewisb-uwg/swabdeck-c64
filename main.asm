@@ -243,13 +243,13 @@ main_game_loop
 ;                   be copied directly back to $D010 if needed.
 SUBTRACT_FROM_X_COORDINATE
         ; performe the subtraction on X_TEMP
-        clc
+        sec
         clv
         lda X_TEMP
         sbc X_INCR_VAL
         sta X_TEMP
 
-        ; if no negative generated, we're done
+        ; if no overflow generated, we're done
         bvc @end
 
 @negative_result
