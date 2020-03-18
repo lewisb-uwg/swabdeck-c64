@@ -25,15 +25,15 @@
             <LabelValue>2150</LabelValue>
         </Label>
         <Label>
-            <LabelText>@negative_result</LabelText>
+            <LabelText>negative_result</LabelText>
             <LabelValue>2160</LabelValue>
         </Label>
         <Label>
-            <LabelText>@handle_hi_bit</LabelText>
+            <LabelText>handle_hi_bit</LabelText>
             <LabelValue>2173</LabelValue>
         </Label>
         <Label>
-            <LabelText>@end</LabelText>
+            <LabelText>end_sfxc</LabelText>
             <LabelValue>2181</LabelValue>
         </Label>
         <Label>

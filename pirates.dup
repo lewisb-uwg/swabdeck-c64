@@ -4,9 +4,9 @@ al $0831 .init_raster_interrupt
 al $0850 .@loop
 al $0853 .main_game_loop
 al $0866 .SUBTRACT_FROM_X_COORDINATE
-al $0870 .@negative_result
-al $087D .@handle_hi_bit
-al $0885 .@end
+al $0870 .negative_result
+al $087D .handle_hi_bit
+al $0885 .end_sfxc
 al $0886 .ADD_TO_X_COORDINATE
 al $0890 .@carry_result
 al $089F .@hi_bit_zero

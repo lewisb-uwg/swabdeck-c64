@@ -250,20 +250,20 @@ SUBTRACT_FROM_X_COORDINATE
         sta X_TEMP
 
         ; if no overflow generated, we're done
-        bvc @end
+        bvc end_sfxc
 
-@negative_result
+negative_result
         ; if hi bit not set, clip to 0
         lda SPRITE_X_HI_TEMP
         and SPRITE_MASK
-        bne @handle_hi_bit
+        bne handle_hi_bit
 
         ; clip to zero
         lda #0 
         sta X_TEMP
-        jmp @end
+        jmp end_sfxc
 
-@handle_hi_bit
+handle_hi_bit
         ; set hi bit to zero
         lda SPRITE_MASK
         invert_acc
@@ -272,7 +272,7 @@ SUBTRACT_FROM_X_COORDINATE
 
         ; i think that's it? shouldn't X_TEMP be the same?
 
-@end
+end_sfxc
         
         rts
         

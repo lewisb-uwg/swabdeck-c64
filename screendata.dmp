@@ -1,5 +1,5 @@
 
-******* 32 Label(s) *******
+******* 35 Label(s) *******
 _coconut_horz = $2F80 
 _coconut_vert = $2FC0 
 _colour_data = $9800 
@@ -18,6 +18,8 @@ CLIP_TO_PIRATE_X_MAX = $0A41
 CLIP_TO_PIRATE_X_MIN = $0A52 
 COPY_SCREEN_DATA_TO_SCREEN_RAM = $0948 
 ENABLE_MULTICOLOR_CHAR_MODE = $09AF 
+end_sfxc = $0885 
+handle_hi_bit = $087D 
 init_raster_interrupt = $0831 
 INITIALIZE_COCONUT_SPRITE = $08A6 
 INITIALIZE_PIRATE_SPRITE = $08D0 
@@ -26,6 +28,7 @@ main_game_loop = $0853
 MOVE_256_BYTES = $09A5 
 MOVE_PIRATE = $0A05 
 MOVE_SEAGULL = $0A78 
+negative_result = $0870 
 PROGRAM_START = $0810 
 REDIRECT_TO_CUSTOM_CHARSET = $08E5 
 SET_SHARED_SCREEN_COLORS = $09B8 
@@ -33,7 +36,7 @@ SUBTRACT_FROM_X_COORDINATE = $0866
 UPDATE_PIRATE = $09C8 
 UPDATE_SEAGULL = $0A54 
 
-******* 17 Unused label(s) *******
+******* 18 Unused label(s) *******
 @carry_result
 @check_for_A
 @choose_wings_down
@@ -44,15 +47,12 @@ UPDATE_SEAGULL = $0A54
 @end
 @end
 @end
-@end
 @finalize
-@handle_hi_bit
 @hi_bit_zero
 @loop
 @loop
 @move_left
 @move_right
-@negative_result
 _coconut_horz
 _coconut_vert
 _colour_data
@@ -67,6 +67,7 @@ CHARDATA
 COPY_SCREEN_DATA_TO_SCREEN_RAM
 ENABLE_MULTICOLOR_CHAR_MODE
 init_raster_interrupt
+negative_result
 PROGRAM_START
 REDIRECT_TO_CUSTOM_CHARSET
 SET_SHARED_SCREEN_COLORS
@@ -127,7 +128,7 @@ VIOLET  = $0004
 WHITE  = $0001
 X_INCR_VAL  = $00C7
 X_TEMP  = $00C5
-******* 2 Unused variables(s) *******
+******* 5 Unused variables(s) *******
 1_128TH_SPEED
 1_16TH_SPEED
 1_32ND_SPEED

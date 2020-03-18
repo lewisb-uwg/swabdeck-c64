@@ -59,9 +59,10 @@ LOOP_TICK=DEST_HI+1
 X_TEMP=LOOP_TICK+1
 SPRITE_MASK = X_TEMP + 1
 X_INCR_VAL = SPRITE_MASK + 1
+SPRITE_X_HI_TEMP = X_INCR_VAL + 1
 
 ; bit 0 is 'S' key, bit 1 is 'A' key. Set if just pressed, unset otherwise. 
-INPUT_FLAGS = X_INCR_VAL + 1
+INPUT_FLAGS = SPRITE_X_HI_TEMP + 1
 
 ; next variable should be two later...
 
@@ -156,11 +157,11 @@ defm set_common_multicolor_sprite_colors
 *=$0810
 PROGRAM_START
         ; setup phase
-        jsr COPY_SCREEN_DATA_TO_SCREEN_RAM
-        jsr ENABLE_MULTICOLOR_CHAR_MODE
-        jsr SET_SHARED_SCREEN_COLORS
-        jsr REDIRECT_TO_CUSTOM_CHARSET
-        jsr APPLY_PER_CHAR_COLORS
+        ;jsr COPY_SCREEN_DATA_TO_SCREEN_RAM
+        ;jsr ENABLE_MULTICOLOR_CHAR_MODE
+        ;jsr SET_SHARED_SCREEN_COLORS
+        ;jsr REDIRECT_TO_CUSTOM_CHARSET
+        ;jsr APPLY_PER_CHAR_COLORS
         jsr INITIALIZE_PIRATE_SPRITE
         jsr INITIALIZE_SEAGULL_SPRITE
         jsr INITIALIZE_COCONUT_SPRITE
@@ -197,7 +198,8 @@ init_raster_interrupt
         sta $D01A
 
         ; return to BASIC
-        rts 
+        ;rts
+@loop   jmp @loop 
         
 
 main_game_loop
@@ -210,6 +212,7 @@ main_game_loop
         ; update the coconut's location and animation
 
         ; increment the loop tick (note it rolls over automatically)
+        clc
         lda LOOP_TICK
         adc #1
         sta LOOP_TICK
@@ -225,40 +228,98 @@ main_game_loop
         ; jump into the KERNAL's normal interrupt service routine
         jmp $EA31
 
-; moves a sprite by incrementing its x-coordinate. DOES NOT WRAP!
-
-; inputs:
-; (X_TEMP): contains the X-value we're incrementing
-; (X_INCR_VAL): the amount to increment x. 255 max (8-bit limit)
-; (SPRITE_MASK): bit set for the sprite getting incremented
+; Will clip to x=0 automatically.
 ;
+; inputs:
+; X_TEMP: contains the X-value we're decrementing
+; X_INCR_VAL: the amount to decrement x, between 0 and 127 (8-bit limit)
+; SPRITE_MASK: bit set for the sprite getting incremented
+; SPRITE_X_HI_TEMP: byte to hold the high bit ($D010-style) of the
+;                   sprite's x-coordinat. Initialize with $D010
 ; outputs:
-; (X_TEMP): is the new low byte of the caller's x-position
-; $D010: appropriate sprite bit is set/unset as needed
-ADD_TO_X_COORDINATE
-        ldy #0
+; X_TEMP: is the new low byte of the caller's x-position
+; SPRITE_X_HI_TEMP: appropriate sprite hi bit is set/unset as needed. It
+;                   guarantees to preserve other sprites' hi bits, so it can
+;                   be copied directly back to $D010 if needed.
+SUBTRACT_FROM_X_COORDINATE
+        ; performe the subtraction on X_TEMP
+        sec
+        clv
         lda X_TEMP
-        adc X_INCR_VAL
-        sta X_TEMP ; note: does not reset carry flag
-        bcc @end ; if c=0, nothing more required
+        sbc X_INCR_VAL
+        sta X_TEMP
 
-        ; c=1, we have to deal with the high bits
-        lda SPRITE_MASK
-        and $D010 ; contains the hi bits of sprite x-locations
-        bne @clear_hi_bit
+        ; if no overflow generated, we're done
+        bvc end_sfxc
 
-@set_hi_bit
-        lda $D010
-        ora SPRITE_MASK
-        jmp @mod_hi_bit
+negative_result
+        ; if hi bit not set, clip to 0
+        lda SPRITE_X_HI_TEMP
+        and SPRITE_MASK
+        bne handle_hi_bit
 
-@clear_hi_bit
+        ; clip to zero
+        lda #0 
+        sta X_TEMP
+        jmp end_sfxc
+
+handle_hi_bit
+        ; set hi bit to zero
         lda SPRITE_MASK
         invert_acc
-        and $D010
-@mod_hi_bit    
-        sta $D010
-@end    rts
+        and SPRITE_X_HI_TEMP
+        sta SPRITE_X_HI_TEMP
+
+        ; i think that's it? shouldn't X_TEMP be the same?
+
+end_sfxc
+        
+        rts
+        
+        
+
+; inputs:
+; X_TEMP: contains the X-value we're incrementing
+; X_INCR_VAL: the amount to increment x, between 0 and 127 (8-bit limit)
+; SPRITE_MASK: bit set for the sprite getting incremented
+; SPRITE_X_HI_TEMP: byte to hold the high bit ($D010-style) of the
+;                   sprite's x-coordinat. Initialize with $D010
+; outputs:
+; X_TEMP: is the new low byte of the caller's x-position
+; SPRITE_X_HI_TEMP: appropriate sprite hi bit is set/unset as needed. It
+;                   guarantees to preserve other sprites' hi bits, so it can
+;                   be copied directly back to $D010 if needed.                   
+ADD_TO_X_COORDINATE
+        ; perform the addition on X_TEMP
+        clc
+        lda X_TEMP
+        adc X_INCR_VAL
+        sta X_TEMP
+
+        ; if no carry, we're done
+        bcs @carry_result
+        rts
+
+@carry_result
+        ; here we have to deal with the high bit
+        ; see if hi bit is set or not
+        lda SPRITE_X_HI_TEMP
+        and SPRITE_MASK
+        beq @hi_bit_zero
+
+        ; hi bit is 1, unset it
+        lda SPRITE_MASK
+        invert_acc
+        and SPRITE_X_HI_TEMP
+        sta SPRITE_X_HI_TEMP
+        rts
+        
+@hi_bit_zero
+        ; simply set the hi bit and we're done
+        lda SPRITE_X_HI_TEMP
+        ora SPRITE_MASK
+        sta SPRITE_X_HI_TEMP
+        rts
 
 INITIALIZE_COCONUT_SPRITE ; sprite 2
         ; set the coconut's 10 color
@@ -402,62 +463,32 @@ SET_SHARED_SCREEN_COLORS
 
 
 UPDATE_PIRATE
-        jsr DETERMINE_MOVEMENT_DISTANCE
-        lda X_INCR_VAL
-        beq @end ; return if X_INCR_VAL hasn't changed
+        jsr CHECK_FOR_DIRECTIONAL_KEYS
+        lda INPUT_FLAGS
+        beq @end ; return if no INPUT_FLAGS
         
         jsr MOVE_PIRATE
-        jsr ANIMATE_PIRATE
+        ;jsr ANIMATE_PIRATE
 @end    rts
 
-; Polls keyboard and sets X_INCR_VAL based on key pressed
-; if 'S' pressed -- X_INCR_VAL gets a positive value
-; if 'A' pressed -- X_INCR_VAL gets a negative value
-; X_INCR_VAL will be zero if the distance moves beyond the pirate's bounds
-pirate_x_increment=5
-DETERMINE_MOVEMENT_DISTANCE
-        lda #0 ; init X_INCR_VAL to zero
-        sta X_INCR_VAL
-        jsr CHECK_FOR_S_KEY
-        lda INPUT_FLAGS
-        cmp #%00000010
-        lda #pirate_x_increment
-        bne @end
-        
-        ; check to see if we're beyond x-max for pirate
-        ; this means the 9th bit is set and pirate_x_ptr > 41
-        lda $D010
-        and #%00000001
-        beq @standard_increment ; 9th bit not set, we're done
-        
-        ; 9th bit is set, see if pirate_x_ptr+increment > 41
-        lda pirate_x_ptr
-        adc #pirate_x_increment
-        cmp #41
-        bpl @standard_increment ; we're <41 so no need to clip
-        lda #41
-        sbc pirate_x_ptr
-        sta X_INCR_VAL
-        jmp @end
-@standard_increment     
-        lda #pirate_x_increment
-        sta X_INCR_VAL
-@end    rts
+
 
 ; Checks for press of the 'S' key
 ; input: none
-; output: INPUT_FLAGS = %00000010 if 'S' pressed, $00 otherwise
+; output: INPUT_FLAGS = %00000010 if 'S' pressed, 
+;               %00000001 if 'A' was pressed, $00 otherwise
 ;
 ; adapted from http://c64-wiki.com/wiki/Keyboard#Assembler
 PRA  = $DC00 ; CIA#1, port register A
 DDRA = $DC02 ; CIA#1, data direction register A
 PRB  = $DC01 ; CIA#1, port register B
 DDRB = $DC03 ; CIA#1, data direction register B
-CHECK_FOR_S_KEY
+CHECK_FOR_DIRECTIONAL_KEYS
+        ; start by checking for 'S'
         lda #0
         sta INPUT_FLAGS
 
-        sei ; deactivate interrupts
+        ;sei ; deactivate interrupts
         lda #%11111111 ; make port A the outputs
         sta DDRA
         
@@ -469,12 +500,25 @@ CHECK_FOR_S_KEY
 
         lda PRB
         and #%00100000 ; masking row 5
-        bne @end
+        bne @check_for_A
+
         lda #%00000010 ; set the bit indicating 'S' was pressed
         sta INPUT_FLAGS
+        jmp @end
 
-        cli ; reactive interrupts
-@end    rts
+@check_for_A
+        lda #%11111101 ; test col1 of the kb matrix
+        sta PRA
+
+        lda PRB
+        and #%00000100 ; masking row 2
+        bne @end
+
+        lda #%00000001 ; set the bit indicating 'A' was pressed
+        sta INPUT_FLAGS
+
+@end    ;cli ; reactivate interrupts
+        rts
 
 MOVE_PIRATE
         lda LOOP_TICK
@@ -483,18 +527,61 @@ MOVE_PIRATE
         bne @end
                 
         ; perform the movement
-        ldy #0
-        lda #%00000001
+        lda #%00000001 ; set the SPRITE_MASK
         sta SPRITE_MASK
-        lda pirate_x_ptr
+
+        lda $D000 ; set X_TEMP
         sta X_TEMP
-        lda #1
+
+        lda #1 ; SET X_INCR_VAL
         sta X_INCR_VAL
+
+        ; set SPRITE_X_HI_TEMP  
+        lda $D010
+        sta SPRITE_X_HI_TEMP
+        
+        lda INPUT_FLAGS
+        beq @end
+        cmp #%00000001
+        beq @move_left
+
+@move_right
         jsr ADD_TO_X_COORDINATE
+        jsr CLIP_TO_PIRATE_X_MAX
+        jmp @finalize
+
+@move_left
+        jsr SUBTRACT_FROM_X_COORDINATE
+        jsr CLIP_TO_PIRATE_X_MIN
+
+@finalize
         lda X_TEMP
-        sta pirate_x_ptr
+        sta $D000 ; sprite 0 x low byte
+
+        lda SPRITE_X_HI_TEMP ; set the hi bit
+        sta $D010
 
 @end    rts
+
+pirate_x_low_byte_max = 41
+CLIP_TO_PIRATE_X_MAX
+        lda SPRITE_X_HI_TEMP
+        and #%00000001
+        beq @end ; not at max if hi bit not set
+
+        ; hi bit is set, see if low byte is < pirate_x_low_byte_max
+        lda X_TEMP
+        cmp #pirate_x_low_byte_max
+        bmi @end ; negative result means pirate_x_low_byte_max > X_TEMP, so done
+
+        ; clip X_TEMP to pirate_x_low_byte_max
+        lda #pirate_x_low_byte_max
+        sta X_TEMP
+
+@end    rts
+
+CLIP_TO_PIRATE_X_MIN
+        rts
 
 ANIMATE_PIRATE
         rts
@@ -537,16 +624,25 @@ MOVE_SEAGULL
         bne @end
                 
         ; perform the movement
-        ldy #0
-        lda #%00000010
+        lda #%00000010 ; set the sprite mask
         sta SPRITE_MASK
-        lda seagull_x_ptr
+
+        lda seagull_x_ptr ; set the seagull x low byte
         sta X_TEMP
-        lda #1
+
+        lda #1 ; set the increment value
         sta X_INCR_VAL
+
+        lda $D010 ; copy $D010 into SPRITE_X_HI_TEMP
+        sta SPRITE_X_HI_TEMP
+
         jsr ADD_TO_X_COORDINATE
-        lda X_TEMP
+
+        lda X_TEMP ; copy X_TEMP back into seagull_x_ptr
         sta seagull_x_ptr
+
+        lda SPRITE_X_HI_TEMP
+        sta $D010
 
         ; not gonna check for x-axis wrapping; right now will wrap
         ; at x=512, giving a little bit of respite for player before
