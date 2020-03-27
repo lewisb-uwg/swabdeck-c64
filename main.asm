@@ -477,7 +477,7 @@ UPDATE_PIRATE
         bne @check_for_A
 
         jsr MOVE_PIRATE_RIGHT
-        jmp @end
+        jmp @animate
 
 @check_for_A
         lda #%11111101 ; test col1 of the kb matrix
@@ -488,7 +488,8 @@ UPDATE_PIRATE
         bne @end
 
         jsr MOVE_PIRATE_LEFT     
-        
+@animate 
+        jsr ANIMATE_PIRATE
 @end    rts
 
 

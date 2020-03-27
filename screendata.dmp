@@ -9,12 +9,12 @@ _screen_data = $9C00
 _seagull_wings_down = $2F40 
 _seagull_wings_up = $2F00 
 ADD_TO_X_COORDINATE = $0889 
-ANIMATE_PIRATE = $0A67 
-ANIMATE_SEAGULL = $0A6F 
+ANIMATE_PIRATE = $0A6A 
+ANIMATE_SEAGULL = $0A72 
 APPLY_PER_CHAR_COLORS = $08EE 
 CHARDATA = $3000 
-CLIP_TO_PIRATE_X_MAX = $0A45 
-CLIP_TO_PIRATE_X_MIN = $0A56 
+CLIP_TO_PIRATE_X_MAX = $0A48 
+CLIP_TO_PIRATE_X_MIN = $0A59 
 COPY_SCREEN_DATA_TO_SCREEN_RAM = $094B 
 ENABLE_MULTICOLOR_CHAR_MODE = $09B2 
 init_raster_interrupt = $0840 
@@ -23,17 +23,18 @@ INITIALIZE_PIRATE_SPRITE = $08D3
 INITIALIZE_SEAGULL_SPRITE = $08BE 
 main_game_loop = $0862 
 MOVE_256_BYTES = $09A8 
-MOVE_PIRATE_LEFT = $0A22 
-MOVE_PIRATE_RIGHT = $09FF 
-MOVE_SEAGULL = $0A8C 
+MOVE_PIRATE_LEFT = $0A25 
+MOVE_PIRATE_RIGHT = $0A02 
+MOVE_SEAGULL = $0A8F 
 PROGRAM_START = $0810 
 REDIRECT_TO_CUSTOM_CHARSET = $08E8 
 SET_SHARED_SCREEN_COLORS = $09BB 
 SUBTRACT_FROM_X_COORDINATE = $0875 
 UPDATE_PIRATE = $09CB 
-UPDATE_SEAGULL = $0A68 
+UPDATE_SEAGULL = $0A6B 
 
-******* 12 Unused label(s) *******
+******* 11 Unused label(s) *******
+@animate
 @carry_result
 @check_for_A
 @choose_wings_down
@@ -54,7 +55,6 @@ _pirate_standing
 _screen_data
 _seagull_wings_down
 _seagull_wings_up
-ANIMATE_PIRATE
 CHARDATA
 init_raster_interrupt
 PROGRAM_START
@@ -115,7 +115,7 @@ VIOLET  = $0004
 WHITE  = $0001
 X_INCR_VAL  = $00C7
 X_TEMP  = $00C5
-******* 9 Unused variables(s) *******
+******* 8 Unused variables(s) *******
 1_128TH_SPEED
 1_16TH_SPEED
 1_32ND_SPEED
