@@ -243,38 +243,29 @@ main_game_loop
 ;                   be copied directly back to $D010 if needed.
 SUBTRACT_FROM_X_COORDINATE
         ; performe the subtraction on X_TEMP
-        sec
-        clv
         lda X_TEMP
+        bmi @sub_and_preserve_hi_bit
+
+        ; positive X_TEMP; subtract and see what happens to the N flag
+        clc
         sbc X_INCR_VAL
-        sta X_TEMP
+        bcc @finalize ; carry did not change (borrow didn't happen)
 
-        ; if no overflow generated, we're done
-        bvc end_sfxc
-
-negative_result
-        ; if hi bit not set, clip to 0
-        lda SPRITE_X_HI_TEMP
-        and SPRITE_MASK
-        bne handle_hi_bit
-
-        ; clip to zero
-        lda #0 
-        sta X_TEMP
-        jmp end_sfxc
-
-handle_hi_bit
-        ; set hi bit to zero
+        ; fhad to use the borrow, so flip hi bit
         lda SPRITE_MASK
         invert_acc
         and SPRITE_X_HI_TEMP
         sta SPRITE_X_HI_TEMP
+        sta X_TEMP
+        jmp @finalize
 
-        ; i think that's it? shouldn't X_TEMP be the same?
-
-end_sfxc
-        
+@sub_and_preserve_hi_bit
+        sec
+        sbc X_INCR_VAL
+@finalize
+        sta X_TEMP
         rts
+
         
         
 
@@ -461,34 +452,19 @@ SET_SHARED_SCREEN_COLORS
 
         rts
 
-
-UPDATE_PIRATE
-        jsr CHECK_FOR_DIRECTIONAL_KEYS
-        lda INPUT_FLAGS
-        beq @end ; return if no INPUT_FLAGS
-        
-        jsr MOVE_PIRATE
-        ;jsr ANIMATE_PIRATE
-@end    rts
-
-
-
-; Checks for press of the 'S' key
-; input: none
-; output: INPUT_FLAGS = %00000010 if 'S' pressed, 
-;               %00000001 if 'A' was pressed, $00 otherwise
-;
 ; adapted from http://c64-wiki.com/wiki/Keyboard#Assembler
 PRA  = $DC00 ; CIA#1, port register A
 DDRA = $DC02 ; CIA#1, data direction register A
-PRB  = $DC01 ; CIA#1, port register B
+PRB  = $DC01 ; C        IA#1, port register B
 DDRB = $DC03 ; CIA#1, data direction register B
-CHECK_FOR_DIRECTIONAL_KEYS
-        ; start by checking for 'S'
-        lda #0
-        sta INPUT_FLAGS
+UPDATE_PIRATE
+        ; ignore if our timeslot isn't here
+        lda LOOP_TICK
+        and #1_8TH_SPEED
+        cmp #1_8TH_SPEED
+        bne @end
 
-        ;sei ; deactivate interrupts
+        ; start by checking for 'S'
         lda #%11111111 ; make port A the outputs
         sta DDRA
         
@@ -502,8 +478,7 @@ CHECK_FOR_DIRECTIONAL_KEYS
         and #%00100000 ; masking row 5
         bne @check_for_A
 
-        lda #%00000010 ; set the bit indicating 'S' was pressed
-        sta INPUT_FLAGS
+        jsr MOVE_PIRATE_RIGHT
         jmp @end
 
 @check_for_A
@@ -514,18 +489,13 @@ CHECK_FOR_DIRECTIONAL_KEYS
         and #%00000100 ; masking row 2
         bne @end
 
-        lda #%00000001 ; set the bit indicating 'A' was pressed
-        sta INPUT_FLAGS
+        jsr MOVE_PIRATE_LEFT     
+        
+@end    rts
 
-@end    ;cli ; reactivate interrupts
-        rts
 
-MOVE_PIRATE
-        lda LOOP_TICK
-        and #FASTEST_SPEED
-        cmp #FASTEST_SPEED
-        bne @end
-                
+
+MOVE_PIRATE_RIGHT              
         ; perform the movement
         lda #%00000001 ; set the SPRITE_MASK
         sta SPRITE_MASK
@@ -540,28 +510,47 @@ MOVE_PIRATE
         lda $D010
         sta SPRITE_X_HI_TEMP
         
-        lda INPUT_FLAGS
-        beq @end
-        cmp #%00000001
-        beq @move_left
-
-@move_right
+        ; do the calcs
         jsr ADD_TO_X_COORDINATE
         jsr CLIP_TO_PIRATE_X_MAX
-        jmp @finalize
-
-@move_left
-        jsr SUBTRACT_FROM_X_COORDINATE
-        jsr CLIP_TO_PIRATE_X_MIN
-
-@finalize
+       
+        ; save the results
         lda X_TEMP
         sta $D000 ; sprite 0 x low byte
 
         lda SPRITE_X_HI_TEMP ; set the hi bit
         sta $D010
 
-@end    rts
+        rts
+
+
+MOVE_PIRATE_LEFT
+
+        lda #%00000001 ; set the SPRITE_MASK
+        sta SPRITE_MASK
+
+        lda $D000 ; set X_TEMP
+        sta X_TEMP
+
+        lda #1 ; SET X_INCR_VAL
+        sta X_INCR_VAL
+
+        ; set SPRITE_X_HI_TEMP  
+        lda $D010
+        sta SPRITE_X_HI_TEMP
+
+        ; do the calcs
+        jsr SUBTRACT_FROM_X_COORDINATE
+        jsr CLIP_TO_PIRATE_X_MIN
+
+        ; save the results
+        lda X_TEMP
+        sta $D000 ; sprite 0 x low byte
+
+        lda SPRITE_X_HI_TEMP ; set the hi bit
+        sta $D010
+
+        rts
 
 pirate_x_low_byte_max = 41
 CLIP_TO_PIRATE_X_MAX
@@ -587,8 +576,8 @@ ANIMATE_PIRATE
         rts
 
 UPDATE_SEAGULL
-        jsr ANIMATE_SEAGULL
-        jsr MOVE_SEAGULL
+        ;jsr ANIMATE_SEAGULL
+        ;jsr MOVE_SEAGULL
         rts
 
 ; switches between seagull animation frames
