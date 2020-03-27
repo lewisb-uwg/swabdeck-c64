@@ -568,6 +568,20 @@ CLIP_TO_PIRATE_X_MAX
 @end    rts
 
 CLIP_TO_PIRATE_X_MIN
+        lda SPRITE_X_HI_TEMP
+        and #%00000001
+        bne @end
+
+        ; hi bit not set, check we're at the min
+        lda X_TEMP
+        cmp #48 ; min X for pirate 
+        bcs @end ; X_TEMP > MIN, so do nothing
+
+        ; clip to min
+        lda #48
+        sta X_TEMP
+
+@end
         rts
 
 ANIMATE_PIRATE
