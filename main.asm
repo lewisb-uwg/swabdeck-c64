@@ -588,8 +588,8 @@ ANIMATE_PIRATE
         rts
 
 UPDATE_SEAGULL
-        ;jsr ANIMATE_SEAGULL
-        ;jsr MOVE_SEAGULL
+        jsr ANIMATE_SEAGULL
+        jsr MOVE_SEAGULL
         rts
 
 ; switches between seagull animation frames
