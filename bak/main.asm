@@ -247,11 +247,11 @@ SUBTRACT_FROM_X_COORDINATE
         bmi @sub_and_preserve_hi_bit
 
         ; positive X_TEMP; subtract and see what happens to the N flag
-        sec
+        clc
         sbc X_INCR_VAL
-        bpl @finalize ; N=0 (still) so finish up
+        bcc @finalize ; carry did not change (borrow didn't happen)
 
-        ; flipped to N=1, so unset the hi bit
+        ; fhad to use the borrow, so flip hi bit
         lda SPRITE_MASK
         invert_acc
         and SPRITE_X_HI_TEMP

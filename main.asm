@@ -228,7 +228,7 @@ main_game_loop
         ; jump into the KERNAL's normal interrupt service routine
         jmp $EA31
 
-; Will clip to x=0 automatically.
+; Will wrap around. Only works for the pirate!
 ;
 ; inputs:
 ; X_TEMP: contains the X-value we're decrementing
@@ -242,28 +242,26 @@ main_game_loop
 ;                   guarantees to preserve other sprites' hi bits, so it can
 ;                   be copied directly back to $D010 if needed.
 SUBTRACT_FROM_X_COORDINATE
-        ; performe the subtraction on X_TEMP
+        ; treat this as a 16-bit subtraction, with
+        ; SPRITE_X_HI_TEMP & SPRITE_MASK as the high byte 
+
+        ; set up the high byte and store it in ldx
+        lda SPRITE_X_HI_TEMP
+        and SPRITE_MASK
+        tax
+        
+        ; low byte subtraction
         lda X_TEMP
-        bmi @sub_and_preserve_hi_bit
-
-        ; positive X_TEMP; subtract and see what happens to the N flag
-        clc
-        sbc X_INCR_VAL
-        bcc @finalize ; carry did not change (borrow didn't happen)
-
-        ; fhad to use the borrow, so flip hi bit
-        lda SPRITE_MASK
-        invert_acc
-        and SPRITE_X_HI_TEMP
-        sta SPRITE_X_HI_TEMP
-        sta X_TEMP
-        jmp @finalize
-
-@sub_and_preserve_hi_bit
         sec
         sbc X_INCR_VAL
-@finalize
         sta X_TEMP
+
+        ; high byte subtraction
+        txa
+        sbc #0 ; high byte of increment value is...zero
+        and SPRITE_MASK ; unset other sprite bits before storing
+        sta SPRITE_X_HI_TEMP
+
         rts
 
         
