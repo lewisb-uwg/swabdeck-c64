@@ -1,5 +1,5 @@
 
-******* 32 Label(s) *******
+******* 35 Label(s) *******
 _coconut_horz = $2F80 
 _coconut_vert = $2FC0 
 _colour_data = $9800 
@@ -8,30 +8,33 @@ _pirate_standing = $2E80
 _screen_data = $9C00 
 _seagull_wings_down = $2F40 
 _seagull_wings_up = $2F00 
-ADD_TO_X_COORDINATE = $0889 
-ANIMATE_PIRATE = $0A6A 
-ANIMATE_SEAGULL = $0A83 
-APPLY_PER_CHAR_COLORS = $08EE 
+ADD_TO_X_COORDINATE = $088C 
+ANIMATE_COCONUTS = $0AF1 
+ANIMATE_PIRATE = $0A83 
+ANIMATE_SEAGULL = $0A9C 
+APPLY_PER_CHAR_COLORS = $0907 
 CHARDATA = $3000 
-CLIP_TO_PIRATE_X_MAX = $0A48 
-CLIP_TO_PIRATE_X_MIN = $0A59 
-COPY_SCREEN_DATA_TO_SCREEN_RAM = $094B 
-ENABLE_MULTICOLOR_CHAR_MODE = $09B2 
+CLIP_TO_PIRATE_X_MAX = $0A61 
+CLIP_TO_PIRATE_X_MIN = $0A72 
+COPY_SCREEN_DATA_TO_SCREEN_RAM = $0964 
+ENABLE_MULTICOLOR_CHAR_MODE = $09CB 
 init_raster_interrupt = $0840 
-INITIALIZE_COCONUT_SPRITE = $08A9 
-INITIALIZE_PIRATE_SPRITE = $08D3 
-INITIALIZE_SEAGULL_SPRITE = $08BE 
+INITIALIZE_COCONUT_SPRITES = $08AC 
+INITIALIZE_PIRATE_SPRITE = $08EC 
+INITIALIZE_SEAGULL_SPRITE = $08D7 
 main_game_loop = $0862 
-MOVE_256_BYTES = $09A8 
-MOVE_PIRATE_LEFT = $0A25 
-MOVE_PIRATE_RIGHT = $0A02 
-MOVE_SEAGULL = $0AA0 
+MOVE_256_BYTES = $09C1 
+MOVE_COCONUTS_DOWN = $0AF0 
+MOVE_PIRATE_LEFT = $0A3E 
+MOVE_PIRATE_RIGHT = $0A1B 
+MOVE_SEAGULL = $0AB9 
 PROGRAM_START = $0810 
-REDIRECT_TO_CUSTOM_CHARSET = $08E8 
-SET_SHARED_SCREEN_COLORS = $09BB 
-SUBTRACT_FROM_X_COORDINATE = $0875 
-UPDATE_PIRATE = $09CB 
-UPDATE_SEAGULL = $0A7C 
+REDIRECT_TO_CUSTOM_CHARSET = $0901 
+SET_SHARED_SCREEN_COLORS = $09D4 
+SUBTRACT_FROM_X_COORDINATE = $0878 
+UPDATE_COCONUTS = $0AE1 
+UPDATE_PIRATE = $09E4 
+UPDATE_SEAGULL = $0A95 
 
 ******* 11 Unused label(s) *******
 @animate
@@ -39,6 +42,8 @@ UPDATE_SEAGULL = $0A7C
 @check_for_A
 @choose_wings_down
 @choose_wings_up
+@color_and_data_loop
+@end
 @end
 @end
 @end
@@ -48,6 +53,7 @@ UPDATE_SEAGULL = $0A7C
 @hi_bit_zero
 @loop
 @loop
+@position_loop
 @switch_to_running
 @switch_to_standing
 _coconut_horz
@@ -72,17 +78,17 @@ BLACK  = $0000
 BLUE  = $0006
 BROWN  = $0009
 CHAR_DATA_MULTIPLIER  = $0000
-coconut_data_ptr  = $07FA
 coconut_horz  = $00BE
 coconut_vert  = $00BF
-coconut_x_ptr  = $D004
-coconut_y_ptr  = $D005
 CYAN  = $0003
 DDRA  = $DC02
 DDRB  = $DC03
 DEST  = $00C2
 DEST_HI  = $00C3
 FASTEST_SPEED  = $0000
+first_coconut_data_ptr  = $07FA
+first_coconut_x_ptr  = $D004
+first_coconut_y_ptr  = $D005
 GREY2  = $000C
 HALF_SPEED  = $0001
 INPUT_FLAGS  = $00C9
@@ -129,6 +135,9 @@ coconut_vert
 CYAN
 DEST
 DEST_HI
+first_coconut_data_ptr
+first_coconut_x_ptr
+first_coconut_y_ptr
 HALF_SPEED
 INPUT_FLAGS
 QUARTER_SPEED

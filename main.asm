@@ -41,12 +41,12 @@ seagull_wings_down=sprite_data+3
 seagull_x_ptr = $D002
 seagull_y_ptr = $D003
 
-; Sprite 2 (the "coconut") constants
-coconut_data_ptr = $07FA
-coconut_x_ptr = $D004
-coconut_y_ptr = $D005
-coconut_horz=sprite_data+4
-coconut_vert=sprite_data+5
+; Sprites 2-7 (the "coconut") constants
+first_coconut_data_ptr = $07FA
+first_coconut_x_ptr = $D004
+first_coconut_y_ptr = $D005
+coconut_horz=sprite_data+4 ; for all coconuts
+coconut_vert=sprite_data+5 ; for all coconuts
 
 ; variables
 SRC=$C0
@@ -123,12 +123,12 @@ defm set_dest
 
 defm enable_sprites
         ; all sprites were designed as multicolor,
-        ; even though 1 and 2 only use a single color
-        lda #$07
+        ; even though sprites 1 through 7 only use a single color
+        lda #$ff
         sta $D01C
 
-        ; turn on sprites 0, 1, and 2
-        lda #$07
+        ; turn on all sprites
+        lda #$ff
         sta $D015
         endm
 
@@ -164,7 +164,7 @@ PROGRAM_START
         jsr APPLY_PER_CHAR_COLORS
         jsr INITIALIZE_PIRATE_SPRITE
         jsr INITIALIZE_SEAGULL_SPRITE
-        jsr INITIALIZE_COCONUT_SPRITE
+        jsr INITIALIZE_COCONUT_SPRITES
         set_common_multicolor_sprite_colors
         enable_sprites
 
@@ -209,7 +209,8 @@ main_game_loop
         ; update the seagull's location and animation
         jsr UPDATE_SEAGULL
 
-        ; update the coconut's location and animation
+        ; update the coconuts'' location and animation
+        jsr UPDATE_COCONUTS
 
         ; increment the loop tick (note it rolls over automatically)
         clc
@@ -310,22 +311,46 @@ ADD_TO_X_COORDINATE
         sta SPRITE_X_HI_TEMP
         rts
 
-INITIALIZE_COCONUT_SPRITE ; sprite 2
-        ; set the coconut's 10 color
+INITIALIZE_COCONUT_SPRITES ; sprites 2-7
+        ldx #0 ; offset to sprite#
+@color_and_data_loop
+        ; set the coconuts; 10 color
         lda #WHITE
-        sta $D029
+        sta $D029,X
 
         ; tell VIC where the first coconut frame is
         lda #coconut_horz
-        sta coconut_data_ptr
-        
+        sta first_coconut_data_ptr,X
+
+        ; increment x up to 5
+        inx
+        cpx #6
+        bne @color_and_data_loop
+
+
+        ldx #0 ; offset to sprites' x-location-address
+        ldy #0 ; offset to sprites' x-location value
+@position_loop
         ; inital coconut x (TODO: change once animations begin)
-        lda #60
-        sta coconut_x_ptr
+        tya
+        adc #60
+        sta first_coconut_x_ptr,X
 
         ; initial coconut y (TODO: change once animations begin)
         lda #100
-        sta coconut_y_ptr
+        sta first_coconut_y_ptr,X
+        
+        ; increment y by 10 (change later)
+        tya
+        adc #10
+        tay
+
+        ; increment x, by two's, up to 10
+        inx
+        inx
+        cpx #12
+        bne @position_loop 
+
         rts
 
 INITIALIZE_SEAGULL_SPRITE ; sprite 1
@@ -660,3 +685,22 @@ MOVE_SEAGULL
         ; at x=512, giving a little bit of respite for player before
         ; the next pass. Also I'm lazy.
 @end    rts
+
+UPDATE_COCONUTS
+        ; ignore if our timeslot isn't here
+        lda LOOP_TICK
+        and #1_8TH_SPEED
+        cmp #1_8TH_SPEED
+        bne @end
+
+        
+        jsr MOVE_COCONUTS_DOWN
+
+        jsr ANIMATE_COCONUTS
+@end    rts
+
+MOVE_COCONUTS_DOWN
+        rts
+
+ANIMATE_COCONUTS
+        rts
