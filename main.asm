@@ -329,21 +329,15 @@ INITIALIZE_COCONUT_SPRITES ; sprites 2-7
 
 
         ldx #0 ; offset to sprites' x-location-address
-        ldy #0 ; offset to sprites' x-location value
+
 @position_loop
         ; inital coconut x (TODO: change once animations begin)
-        tya
-        adc #60
+        lda #0
         sta first_coconut_x_ptr,X
 
         ; initial coconut y (TODO: change once animations begin)
-        lda #100
+        lda #50
         sta first_coconut_y_ptr,X
-        
-        ; increment y by 10 (change later)
-        tya
-        adc #10
-        tay
 
         ; increment x, by two's, up to 10
         inx
