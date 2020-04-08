@@ -586,6 +586,16 @@ CLIP_TO_PIRATE_X_MIN
         rts
 
 ANIMATE_PIRATE
+        lda $07f8 ; sprite 0 data pointer
+        cmp #pirate_standing
+        beq @switch_to_running
+@switch_to_standing
+        lda #pirate_standing
+        jmp @finalize
+@switch_to_running
+        lda #pirate_running
+@finalize
+        sta $07f8
         rts
 
 UPDATE_SEAGULL
